@@ -66,6 +66,8 @@ async def main(page: ft.Page):
             on_surface="#1A1A1A",
             outline="#E0E0E0",
             scrim="#ECE5DD",
+            tertiary="#E6FAE5"
+
         ),
         page_transitions=ft.PageTransitionsTheme(
             android="fadeUpwards",
@@ -81,7 +83,8 @@ async def main(page: ft.Page):
             surface="#252424",        # True dark surface
             on_surface="#E8E8E8",     # Soft white text
             outline="#2C2C2C",
-            scrim="#302D2D",          # Subtle borders
+            scrim="#302D2D",  
+                    tertiary="#212121",          # Subtle borders
         ),
         page_transitions=ft.PageTransitionsTheme(
             android="fadeUpwards",
@@ -186,7 +189,12 @@ async def main(page: ft.Page):
         to retry, instead of a dead blank screen."""
 
         def retry(e):
-            page.go(route)
+            # page.route already equals `route` here (this view's own
+            # route is the one that failed), so a plain page.go(route)
+            # is a same-route no-op client-side — the tap would do
+            # nothing. Directly re-run the route-loading logic instead
+            # of relying on a "route change" the client won't detect.
+            page.run_task(route_change, None)
 
         return ft.View(
             route=route,
@@ -207,43 +215,617 @@ async def main(page: ft.Page):
             padding=20,
         )
 
-    def shimmer_box(radius=12):
+    def shimmer_box(radius=12, height=None, width=None, expand = False):
         """A single placeholder rectangle. Its opacity gets pulsed by the
-        shimmer loop below to create the animated shimmer effect."""
-        return ft.Container(
-            expand=True,
+        shimmer loop below to create the animated shimmer effect. Pass
+        height/width to make a fixed-size piece (avatar, button, chat
+        bubble); leave both None to have it expand and fill its slot,
+        same as before. Tagged via `.data` so _collect_boxes can find
+        exactly these (and not the plain layout/spacer containers used
+        to arrange them)."""
+        box = ft.Container(
+            expand=True if ((height is None and width is None) or expand) else None,
+            height=height,
+            width=width,
             border_radius=radius,
             bgcolor=ft.Colors.OUTLINE,
             animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
             opacity=0.35,
         )
+        box.data = "shimmer_box"
+        return box
+
+    def _collect_boxes(control):
+        """Walk a control tree and pull out every shimmer_box (tagged via
+        `.data`) so run_shimmer can animate them, no matter how deeply
+        nested the layout is. Plain wrapper/spacer containers used to
+        arrange the boxes are skipped."""
+        boxes = []
+
+        def walk(c):
+            if isinstance(c, ft.Container):
+                if getattr(c, "data", None) == "shimmer_box":
+                    boxes.append(c)
+                if c.content is not None:
+                    walk(c.content)
+            elif isinstance(c, (ft.Row, ft.Column)):
+                for child in c.controls:
+                    walk(child)
+
+        walk(control)
+        return boxes
+
+    # ── Shared building blocks ────────────────────────────────────
+    # Small pieces reused across several layouts below, so every
+    # skeleton banner/navbar/card looks consistent with the others.
+
+    def _bottom_navbar():
+        """One continuous shimmer bar at the same height as the real
+        bottom app bar, set apart by a hairline top divider (no filled
+        background) with guaranteed top spacing so it never collides
+        with the content above it on smaller screens."""
+        return ft.Container(
+            height=60,
+                        bgcolor=ft.Colors.OUTLINE,
+            margin=ft.margin.only(top=14),
+            border_radius=ft.BorderRadius(top_left=15,top_right=15, bottom_left=None, bottom_right=None),
+            padding=ft.padding.symmetric(horizontal=4, vertical=6),
+            border=ft.border.only(top=ft.BorderSide(1, ft.Colors.OUTLINE)),
+            animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
+                        opacity=0.35
+        )
+
+    def _section_bg(content, padding=16, radius=16, expand=False):
+        """Wraps a chunk of a layout in a faintly tinted background
+        panel — used sparingly to divide an otherwise sparse skeleton
+        into two or three visually distinct sections (not one per
+        element, just enough that the page doesn't look like scattered
+        bars floating on nothing, especially on wide/desktop viewports)."""
+        return ft.Container(
+            content=content,
+            padding=padding,
+            border_radius=radius,
+            bgcolor=ft.Colors.with_opacity(0.035, ft.Colors.ON_SURFACE),
+            expand=expand,
+        )
+
+    def _top_banner(height=110, radius=20):
+        """Solid rounded block standing in for the green gradient header
+        used at the top of most pages."""
+        return shimmer_box(radius=radius, height=height)
+
+    def _section_label():
+        """A short bar + a shorter 'See All'-style bar, mimicking a
+        section header row like 'Friends  ···  See All'."""
+        return ft.Row(
+            [
+                shimmer_box(radius=6, height=16, width=110),
+                shimmer_box(radius=6, height=12, width=44),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+
+    def _avatar_col(size=56):
+        return ft.Column(
+            [shimmer_box(radius=size / 2, width=size, height=size),
+             shimmer_box(radius=6, width=size - 10, height=10)],
+            spacing=6,
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        )
+
+    # ── Individual layout templates ─────────────────────────────
+    # Each returns an ft.Control built from shimmer_box() pieces,
+    # arranged to roughly mirror a real page's shape. Add a new one
+    # here, then register it in SKELETON_LAYOUTS / _PREFIXES below —
+    # nothing else needs to change.
+
+    def _layout_default(rows: int = 5):
+        """Generic fallback: evenly spaced bars (the original look)."""
+        boxes = [shimmer_box() for _ in range(rows)]
+        return ft.Column(controls=boxes, spacing=14, expand=True,
+                          alignment=ft.MainAxisAlignment.SPACE_EVENLY)
+
+    def _layout_dashboard():
+        """Mirrors /dashboard: greeting banner, two side-by-side action
+        cards (Courses/Network), a 'Friends' row of avatars, a 'Weekly
+        Activity' chart block, bottom nav."""
+        banner = _top_banner(height=100)
+
+        action_cards = ft.Row(
+            [shimmer_box(radius=16, height=110, expand=True), shimmer_box(radius=16, height=110, expand=True)],
+            spacing=14,
+        )
+
+        friends_row = ft.Row(
+            [_avatar_col(size=52) for _ in range(6)],
+            spacing=16,
+            scroll=ft.ScrollMode.HIDDEN,
+        )
+        friends_section = _section_bg(
+            ft.Column([_section_label(), ft.Container(height=8), friends_row], spacing=4)
+        )
+
+        chart_section = _section_bg(
+            ft.Column([_section_label(), ft.Container(height=8), shimmer_box(radius=12, height=120)],
+                      spacing=4, expand=True),
+            padding=16,
+            expand=True,
+        )
+
+        return ft.Column(
+            controls=[
+                banner,
+                action_cards,
+                friends_section,
+                chart_section,
+                _bottom_navbar(),
+            ],
+            spacing=20,
+            expand=True,
+        )
+
+    def _layout_chat_list():
+        """Mirrors /nu-chat: green header with search bar, then a list
+        of chat rows (avatar + title/timestamp + preview line), bottom
+        nav. (This is the conversation-list state, not an open thread.)"""
+        header = ft.Column(
+            [shimmer_box(radius=6, height=22, width=110),
+             shimmer_box(radius=10, height=40)],
+            spacing=14,
+        )
+        header_container = ft.Container(content=header, padding=16, bgcolor=None)
+
+        def chat_row():
+            return ft.Row(
+                [
+                    shimmer_box(radius=24, width=48, height=48),
+                    ft.Column(
+                        [
+                            ft.Row(
+                                [shimmer_box(radius=6, height=13, width=170),
+                                 shimmer_box(radius=6, height=10, width=36)],
+                                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                            ),
+                            shimmer_box(radius=6, height=10, width=120),
+                        ],
+                        spacing=8,
+                        expand=True,
+                    ),
+                ],
+                spacing=12,
+            )
+
+        chat_list = ft.Column(
+            controls=[chat_row() for _ in range(5)],
+            spacing=20,
+            expand=True,
+        )
+
+        return ft.Column(
+            controls=[
+                shimmer_box(radius=16, height=90),
+                ft.Container(content=chat_list, expand=True, padding=ft.padding.only(top=12, bottom=8)),
+                _bottom_navbar(),
+            ],
+            spacing=16,
+            expand=True,
+        )
+
+    def _layout_course_grid():
+        """Mirrors /courses (learner library): green banner, a tab row
+        (Available/Ongoing/Completed), 2-col grid of solid course-card
+        silhouettes (one shimmer block per card, matching the real
+        image+text card shape), bottom nav."""
+        banner = _top_banner(height=70)
+        tabs = ft.Row(
+            [shimmer_box(radius=6, height=14, width=100),
+             shimmer_box(radius=6, height=14, width=100),
+             shimmer_box(radius=6, height=14, width=110)],
+            spacing=24,
+        )
+
+        def card_silhouette():
+            # One solid block per card — mirrors the real card's outer
+            # shape (image + text stacked). expand=True is required here:
+            # shimmer_box() only auto-expands when height/width are both
+            # left None, and this box has a fixed height, so without
+            # expand=True it collapses to near-zero width inside the Row.
+            box = shimmer_box(radius=14, height=190)
+            box.expand = True
+            return box
+
+        grid = ft.Column(
+            [
+                ft.Row([card_silhouette(), card_silhouette()], spacing=14, expand=True),
+                ft.Row([card_silhouette(), card_silhouette()], spacing=14, expand=True),
+            ],
+            spacing=14,
+            expand=True,
+        )
+
+        return ft.Column(
+            controls=[banner, tabs, ft.Container(content=grid, expand=True, padding=ft.padding.only(top=8)),
+                      _bottom_navbar()],
+            spacing=16,
+            expand=True,
+        )
+
+    def _layout_course_reader():
+        """Mirrors the standard LMS reading page: dark top app bar, a
+        left sidebar (course title card + module/lesson rows) taking
+        roughly a third of the width — slightly more, since that's how
+        it renders in the real app — a main content pane on the right,
+        and a single long bar along the bottom the same height as the
+        real bottom app bar (standing in for it, since the exact
+        prev/next controls vary by lesson)."""
+        topbar = ft.Row(
+            [shimmer_box(radius=8, width=28, height=28),
+             shimmer_box(radius=6, height=18, width=220)],
+            spacing=16,
+        )
+
+        sidebar_card = shimmer_box(radius=12, height=70)
+        sidebar_rows = ft.Column(
+            [shimmer_box(radius=6, height=14) for _ in range(6)],
+            spacing=16,
+            expand=True,
+        )
+        sidebar = ft.Container(
+            content=ft.Column(
+                [sidebar_card, ft.Container(height=10), sidebar_rows],
+                spacing=0,
+                expand=True,
+            ),
+            expand=4,  # ~38% of the row's width — a third, slightly bigger
+            padding=ft.padding.only(right=16),
+        )
+
+        breadcrumb = ft.Row(
+            [shimmer_box(radius=6, height=10, width=130),
+             shimmer_box(radius=20, height=18, width=60)],
+            spacing=10,
+        )
+        title = shimmer_box(radius=6, height=24, width=260)
+        paragraph = ft.Column(
+            [shimmer_box(radius=6, height=12) for _ in range(6)],
+            spacing=10,
+            expand=True,
+        )
+        main_pane = ft.Container(
+            content=ft.Column(
+                [breadcrumb, ft.Container(height=8), title, ft.Container(height=14), paragraph],
+                spacing=0,
+                expand=True,
+            ),
+            expand=6,  # remaining ~62%
+        )
+
+        body = ft.Row([sidebar, main_pane], expand=True)
+
+        # Standard LMS bottom bar: reuse the same bottom-navbar treatment
+        # (continuous bar, tinted strip, hairline divider) so it's
+        # visually identical to the app's real bottom nav, rather than a
+        # separately-styled lookalike.
+        bottom_bar = _bottom_navbar()
+
+        return ft.Column(
+            controls=[topbar, ft.Container(height=10), ft.Container(content=body, expand=True), bottom_bar],
+            spacing=0,
+            expand=True,
+        )
+
+
+    def _layout_org_admin_dashboard():
+        """Mirrors /organisations (admin view): green banner with avatar
+        + org name + contact rows, a row of colored stat pills, then
+        two side-by-side list panels (Members / Courses)."""
+        banner = ft.Column(
+            [
+                shimmer_box(radius=8, height=16, width=120, expand= True),
+                ft.Container(height=8),
+                shimmer_box(radius=40, width=72, height=72, expand=True),
+                shimmer_box(radius=6, height=16, width=100, expand=True),
+                shimmer_box(radius=6, height=10, width=140,expand=True),
+            ],
+            spacing=10,
+        )
+
+        stat_pills = ft.Row(
+            [shimmer_box(radius=14, height=64) for _ in range(4)],
+            spacing=10,
+        )
+
+        def list_panel():
+            return _section_bg(
+                ft.Column(
+                    [
+                        _section_label(),
+                        ft.Container(height=8),
+                        ft.Column(
+                            [ft.Row([shimmer_box(radius=18, width=36, height=36),
+                                     shimmer_box(radius=6, height=12, width=110)], spacing=10)
+                             for _ in range(3)],
+                            spacing=16,
+                        ),
+                    ],
+                    spacing=0,
+                    expand=True,
+                ),
+                padding=16,
+                expand=True,
+            )
+
+        panels = ft.Row([list_panel(), list_panel()], spacing=20, expand=True)
+
+        return ft.Column(
+            controls=[banner, stat_pills, ft.Container(content=panels, expand=True, padding=ft.padding.only(top=8)),
+                      _bottom_navbar()],
+            spacing=18,
+            expand=True,
+        )
+
+    def _layout_profile():
+        """Mirrors /profile: green banner with centered avatar, name,
+        role pill; a 'Quick Actions' 2-card row; a toggle row; and an
+        account-details list."""
+        banner = ft.Column(
+            [
+                ft.Container(height=10),
+                ft.Row([shimmer_box(radius=45, width=88, height=88)], alignment=ft.MainAxisAlignment.CENTER),
+                ft.Row([shimmer_box(radius=6, height=18, width=110)], alignment=ft.MainAxisAlignment.CENTER),
+                ft.Row([shimmer_box(radius=14, height=24, width=64)], alignment=ft.MainAxisAlignment.CENTER),
+            ],
+            spacing=12,
+        )
+
+        quick_actions = ft.Row(
+            [shimmer_box(radius=14, height=90, expand=True), shimmer_box(radius=14, height=90, expand=True)],
+            spacing=14,
+        )
+
+        toggle_row = ft.Row(
+            [shimmer_box(radius=6, height=12, width=130), shimmer_box(radius=10, width=32, height=18)],
+            spacing=12,
+        )
+
+        detail_rows = _section_bg(
+            ft.Column(
+                [ft.Row([shimmer_box(radius=8, width=32, height=32),
+                         ft.Column([shimmer_box(radius=6, height=10, width=50),
+                                    shimmer_box(radius=6, height=13, width=160)], spacing=6)],
+                        spacing=12)
+                 for _ in range(2)],
+                spacing=18,
+            )
+        )
+
+        return ft.Column(
+            controls=[
+                banner,
+                ft.Container(height=8),
+                quick_actions,
+                toggle_row,
+                ft.Container(content=detail_rows, expand=True, padding=ft.padding.only(top=8)),
+                _bottom_navbar(),
+            ],
+            spacing=18,
+            expand=True,
+        )
+
+    def _layout_network():
+        """Mirrors /network: dark header with back arrow + title, a tab
+        row (My Network/Requests/Discover), a search bar, then a dense
+        grid of smaller solid person-card silhouettes — 3 per row rather
+        than 2, since the real cards are compact and fill the row more
+        tightly than a wide 2-col grid."""
+        header = ft.Row(
+            [shimmer_box(radius=8, width=24, height=24), shimmer_box(radius=6, height=18, width=100)],
+            spacing=14,
+        )
+        tabs = ft.Row(
+            [shimmer_box(radius=18, height=32, width=110),
+             shimmer_box(radius=6, height=14, width=70),
+             shimmer_box(radius=6, height=14, width=60)],
+            spacing=20,
+        )
+        search = shimmer_box(radius=10, height=42)
+
+        def person_card():
+            # One solid block per card — smaller and denser than the
+            # course cards, matching the real network card's compact
+            # gradient-banner-plus-name proportions. expand=True is
+            # required since this box has a fixed height (so
+            # shimmer_box() won't auto-expand it) and it needs to fill
+            # its slot in the row rather than collapse to near-zero width.
+            box = shimmer_box(radius=12, height=130)
+            box.expand = True
+            return box
+
+        grid = ft.Column(
+            [ft.Row([person_card(), person_card(), person_card()], spacing=10, expand=True) for _ in range(3)],
+            spacing=10,
+            expand=True,
+        )
+
+        return ft.Column(
+            controls=[
+                shimmer_box(radius=16, height=64),
+                tabs, search,
+                ft.Container(content=grid, expand=True, padding=ft.padding.only(top=8)),
+                _bottom_navbar(),
+            ],
+            spacing=16,
+            expand=True,
+        )
+
+    def _layout_course_library():
+        """Mirrors an org's course library: green banner with title +
+        count + 'New Course' button, then a grid of course cards (image,
+        two pills, title, description bars, enrolled count, two
+        buttons)."""
+        banner = ft.Row(
+            [
+                ft.Column([shimmer_box(radius=6, height=20, width=160, expand= True),
+                           shimmer_box(radius=6, height=10, width=70, expand = True)], spacing=8),
+                shimmer_box(radius=20, height=36, width=110, expand=True),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+        banner_container = ft.Container(content=banner, bgcolor=None, height=90)
+
+        def lib_card():
+            btn_left = shimmer_box(radius=18, height=34, expand = True)
+            btn_left.expand = True
+            btn_right = shimmer_box(radius=18, height=34, expand=True)
+            btn_right.expand = True
+            return ft.Column(
+                [
+                    shimmer_box(radius=12, height=110, expand=True),
+                    ft.Row([shimmer_box(radius=20, width=44, height=18, expand=True),
+                            shimmer_box(radius=20, width=64, height=18, expand=True)], spacing=6),
+                    shimmer_box(radius=6, height=14, expand=True),
+                    shimmer_box(radius=6, height=9, width=180, expand=True),
+                    ft.Row([btn_left, btn_right], spacing=8),
+                ],
+                spacing=8,
+            )
+
+        grid = ft.Column(
+            [ft.Row([lib_card(), lib_card()], spacing=14)
+             for _ in range(2)],
+            spacing=18,
+            expand=True,
+        )
+
+        return ft.Column(
+            controls=[banner_container, ft.Container(content=grid, expand=True), _bottom_navbar()],
+            spacing=12,
+            expand=True,
+        )
+
+    def _layout_course_builder():
+        """Mirrors the course builder: plain header (back arrow + title
+        + subtitle), a row of 3 action buttons, then a module section
+        with a title/icon row and a stack of lesson rows (icon + title
+        + tag pill + edit/delete icons)."""
+        header = ft.Row(
+            [
+                shimmer_box(radius=8, width=24, height=24),
+                ft.Column([shimmer_box(radius=6, height=16, width=150),
+                           shimmer_box(radius=6, height=10, width=220)], spacing=8),
+            ],
+            spacing=14,
+        )
+        action_buttons = ft.Row(
+            [shimmer_box(radius=20, height=36, width=100) for _ in range(3)],
+            spacing=10,
+        )
+
+        module_header = ft.Row(
+            [shimmer_box(radius=6, height=16, width=200),
+             ft.Row([shimmer_box(radius=6, width=18, height=18) for _ in range(4)], spacing=12)],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+
+        def lesson_row():
+            return ft.Row(
+                [
+                    shimmer_box(radius=10, width=36, height=36),
+                    ft.Column([shimmer_box(radius=6, height=13, width=220),
+                               shimmer_box(radius=20, height=16, width=64)], spacing=8, expand=True),
+                    ft.Row([shimmer_box(radius=6, width=16, height=16),
+                            shimmer_box(radius=6, width=16, height=16)], spacing=12),
+                ],
+                spacing=14,
+            )
+
+        lessons = ft.Column([lesson_row() for _ in range(4)], spacing=16)
+
+        return ft.Column(
+            controls=[
+                header,
+                ft.Container(height=8),
+                action_buttons,
+                ft.Container(height=8),
+                module_header,
+                ft.Container(height=8),
+                ft.Container(content=lessons, expand=True),
+            ],
+            spacing=0,
+            expand=True,
+        )
+
+    def _layout_form():
+        """Stacked input-field placeholders with a full-width button at
+        the bottom. For accept-invite / invite-members / create flows."""
+        fields = ft.Column(controls=[shimmer_box(radius=10, height=52) for _ in range(4)], spacing=16)
+        button = shimmer_box(radius=10, height=48)
+        return ft.Column(
+            controls=[ft.Container(content=fields, expand=True), button],
+            spacing=20,
+            expand=True,
+        )
+
+    # ── Route → layout registry ─────────────────────────────────
+    # Add/re-map routes here; nothing else needs to change. Exact
+    # matches first, then prefix matches for parametrized routes.
+
+    SKELETON_LAYOUTS = {
+        "/dashboard": _layout_dashboard,
+        "/network": _layout_network,
+        "/nu-chat": _layout_chat_list,
+        "/courses": _layout_course_grid,
+        "/organisations": _layout_org_admin_dashboard,
+        "/self-study": _layout_course_grid,
+        "/profile": _layout_profile,
+        "/edit-profile": _layout_profile,
+    }
+
+    # Ordered (most-specific-first) substring checks for parametrized
+    # routes — checked before the plain prefix list below.
+    SKELETON_LAYOUT_CONTAINS = [
+        ("/invite-members", _layout_form),             # .../organisations/:org_id/invite-members
+        ("/manage", _layout_course_builder),           # .../courses/:id/manage
+        ("/view", _layout_course_reader),               # .../courses/:id/view
+        ("/stats", _layout_course_reader),
+        ("/analytics", _layout_course_reader),
+        ("/settings", _layout_course_reader),
+        ("/courses", _layout_course_library),           # /organisations/:org_id/courses
+    ]
+
+    SKELETON_LAYOUT_PREFIXES = [
+        ("/member/", _layout_profile),
+        ("/courses/", _layout_course_reader),           # bare /courses/:id fallback
+        ("/organisations/", _layout_course_library),    # org sub-routes fallback
+        ("/accept-invite/", _layout_form),
+    ]
+
+    def _resolve_layout(route: str):
+        if route in SKELETON_LAYOUTS:
+            return SKELETON_LAYOUTS[route]
+        for needle, layout_fn in SKELETON_LAYOUT_CONTAINS:
+            if needle in route:
+                return layout_fn
+        for prefix, layout_fn in SKELETON_LAYOUT_PREFIXES:
+            if route.startswith(prefix):
+                return layout_fn
+        return _layout_default
 
     def skeleton_view(route: str, rows: int = 5) -> ft.View:
         """Full-screen shimmer placeholder shown instantly while the real
-        view loads. Fills the available width/height with evenly spaced
-        rectangles so it never looks sparse or blank on any screen size.
-        Swapped out for the real ft.View once its data finishes fetching."""
-        boxes = [shimmer_box() for _ in range(rows)]
-        boxes.append( ft.Container(
-            expand=True,
-            border_radius=3,
-            bgcolor=ft.Colors.OUTLINE,
-            animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
-            opacity=0.35,
-        ))
-
-        skeleton_column = ft.Column(
-            controls=boxes,
-            spacing=14,
-            expand=True,
-            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
-        )
+        view loads. Picks a layout template matching the destination
+        route so the skeleton roughly mirrors the real page's shape
+        (hero + list, grid, profile header, chat bubbles, form fields,
+        etc.) instead of one generic stack of bars everywhere. Swapped
+        out for the real ft.View once its data finishes fetching."""
+        layout_fn = _resolve_layout(route)
+        content = layout_fn() if layout_fn is not _layout_default else layout_fn(rows)
 
         view = ft.View(
             route=route,
             controls=[
                 ft.Container(
-                    content=skeleton_column,
+                    content=content,
                     expand=True,
                     padding=20,
                 )
@@ -252,7 +834,7 @@ async def main(page: ft.Page):
         )
         # Stash the boxes on the view so the shimmer loop can find and
         # animate them without needing a separate registry.
-        view.data = boxes
+        view.data = _collect_boxes(content)
         return view
 
     async def run_shimmer(boxes, view: ft.View):
@@ -449,7 +1031,21 @@ async def main(page: ft.Page):
                 # is the previous one (e.g. "/dashboard"). Keep them in sync
                 # so back-navigation (on_view_pop) and any future route
                 # comparisons aren't looking at a stale/wrong route.
+                #
+                # BUG FIX: setting page.route here only updates server-side
+                # state — it does NOT tell the browser/client router that
+                # the URL changed. So the browser's address bar/history is
+                # left pointing at the route that just failed. The next
+                # time the user taps a nav item for that same destination,
+                # the client router sees "already there" (same route string
+                # as its own history) and never re-fires on_route_change —
+                # the tap silently does nothing. Explicitly pushing the
+                # route back to the client (fire-and-forget; route_change
+                # itself is guarded against re-entrancy issues by being the
+                # only writer of page.views) keeps the browser's actual
+                # navigation state in sync with what's really on screen.
                 page.route = previous_view.route
+                page.run_task(page.push_route, previous_view.route, skip_route_change_event=True)
                 return True
             else:
                 page.views.append(_error_fallback_view(route, ex))
@@ -704,9 +1300,9 @@ async def main(page: ft.Page):
     await route_change(None)
 
 
-#ft.run(main, assets_dir="assets")
+ft.run(main, assets_dir="assets")
 
-###WEB CONFIG
+"""###WEB CONFIG
 import flet.fastapi as flet_fastapi
 from fastapi import FastAPI, Request
 
@@ -736,4 +1332,4 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
 
     # Start the server directly from Python, hiding it from Coolify's UI restrictions
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port)"""

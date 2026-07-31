@@ -267,7 +267,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
         
         display_pct  = f"{int(progress_val)}%"
         prog_color   = _progress_color(progress_ratio)
-        is_even      = index % 2 == 0
+        is_even      = False
 
         async def _message(e, uid=user_id):
             result = await start_direct_message(token, str(uid))
@@ -375,7 +375,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                 controls=[
                     # Table header
                     ft.Container(
-                        bgcolor=ft.Colors.GREY_50,
+                        bgcolor=ft.Colors.SURFACE,
                         padding=ft.padding.symmetric(horizontal=12, vertical=8),
                         border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
                         content=ft.Row(

@@ -21,23 +21,14 @@ def get_bottom_appbar(page: ft.Page):
             tight=True, 
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             controls=[
-                # 1. The Animated Pill
-                ft.Container(
-                    width=20, 
-                    height=3, 
-                    bgcolor=ft.Colors.PRIMARY,
-                    border_radius=10, 
-                    margin=ft.margin.only(bottom=0), # Reduced margin to save space
-                    opacity=1 if is_active else 0,
-                    scale=1 if is_active else 0.5,
-                    animate_opacity=300, 
-                    animate_scale=300,
-                ),
                 # 2. The Icon Button
                 ft.IconButton(
                     icon=icon_name, 
                     icon_color=ft.Colors.PRIMARY,
                     icon_size=25,
+                    bgcolor=ft.Colors.TERTIARY if is_active else None,
+                    hover_color= "#B7F4B5",
+                    mouse_cursor=ft.MouseCursor.CLICK,
                     rotate=ft.Rotate(angle=-0.5) if is_rotated else None,
                     on_click=lambda e, r=route: page.go(r) 
                 ),

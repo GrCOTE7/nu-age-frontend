@@ -306,15 +306,15 @@ async def self_study_view(page: ft.Page):
             return
 
         icon_map = {
-            "pdf":  (ft.Icons.PICTURE_AS_PDF_ROUNDED, ft.Colors.ON_PRIMARY),
-            "text": (ft.Icons.TEXT_SNIPPET_OUTLINED,  ft.Colors.ON_PRIMARY),
-            "url":  (ft.Icons.LINK_ROUNDED,            ft.Colors.ON_PRIMARY),
+            "pdf":  (ft.Icons.PICTURE_AS_PDF_ROUNDED, ft.Colors.ON_SURFACE),
+            "text": (ft.Icons.TEXT_SNIPPET_OUTLINED,  ft.Colors.ON_SURFACE),
+            "url":  (ft.Icons.LINK_ROUNDED,            ft.Colors.ON_SURFACE),
         }
 
         for mat in mats:
             mat_id = mat["id"]
             icon, color = icon_map.get(mat.get("source_type", "text"),
-                                       (ft.Icons.DESCRIPTION_OUTLINED, ft.Colors.GREY_200))
+                                       (ft.Icons.DESCRIPTION_OUTLINED, ft.Colors.ON_SURFACE))
 
             is_selected = mat_id in state["selected_mat_ids"]
             chip = ft.Container(

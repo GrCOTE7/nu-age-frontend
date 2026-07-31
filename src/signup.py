@@ -221,7 +221,7 @@ def Signup_view(page: ft.Page):
     otp_btn = ft.ElevatedButton(
         "Verify Account",
         width=250, height=46,
-        color=ft.Colors.WHITE, bgcolor=ft.Colors.PRIMARY,
+        color=ft.Colors.ON_PRIMARY, bgcolor=ft.Colors.PRIMARY,
         style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=10), elevation=0),
         on_click=handle_verification
     )
@@ -236,7 +236,7 @@ def Signup_view(page: ft.Page):
             width=300,
             content=ft.Column([
                 ft.Text("We sent a 6-digit code to your email. Enter it below to activate your account.", 
-                        size=13, color=ft.Colors.GREY_600, text_align=ft.TextAlign.CENTER),
+                        size=13, color=ft.Colors.ON_PRIMARY, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=10),
                 ft.Row([otp_input], alignment=ft.MainAxisAlignment.CENTER),
                 ft.Row([otp_error_text], alignment=ft.MainAxisAlignment.CENTER),
@@ -319,7 +319,7 @@ def Signup_view(page: ft.Page):
                 
                 # Build the SnackBar
                 error_snack = ft.SnackBar(
-                    content=ft.Text(f"Could not load universities: {err_msg}", color=ft.Colors.WHITE),
+                    content=ft.Text(f"Could not load universities: {err_msg}", color=ft.Colors.ON_PRIMARY),
                     bgcolor=ft.Colors.RED_600,
                     behavior=ft.SnackBarBehavior.FLOATING,
                     duration=4000
@@ -343,7 +343,7 @@ def Signup_view(page: ft.Page):
                 University.options = [
                     ft.dropdown.Option(
                         key=uni.get("name", ""), 
-                        content=ft.Text(uni.get("name", ""), color="white")
+                        content=ft.Text(uni.get("name", ""), color="ON_PRIMARY")
                     ) 
                     for uni in universities_data if uni.get("name")
                 ]
@@ -422,7 +422,7 @@ def Signup_view(page: ft.Page):
         "Create Account",
         width=float("inf"),   # fills parent
         expand=True,
-        color=ft.Colors.WHITE,
+        color=ft.Colors.ON_PRIMARY,
         bgcolor=ft.Colors.PRIMARY,
         height=46,
         disabled=True,
@@ -452,7 +452,7 @@ def Signup_view(page: ft.Page):
                         "Create your account",
                         size=22,
                         weight=ft.FontWeight.W_700,
-                        color=ft.Colors.GREY_900,
+                        color=ft.Colors.ON_SURFACE,
                     ),
                     ft.Text(
                         "Join Nu Age and start learning today.",
@@ -480,7 +480,7 @@ def Signup_view(page: ft.Page):
             section_label("ROLE"),
             ft.Container(
                 content=role_selection,
-                bgcolor=ft.Colors.GREY_50,
+                bgcolor=ft.Colors.SURFACE,
                 border_radius=8,
                 padding=ft.padding.symmetric(horizontal=10, vertical=6),
                 border=ft.border.all(1, ft.Colors.GREY_200),
@@ -490,7 +490,7 @@ def Signup_view(page: ft.Page):
             section_label("GENDER"),
             ft.Container(
                 content=gender_selection,
-                bgcolor=ft.Colors.GREY_50,
+                bgcolor=ft.Colors.SURFACE,
                 border_radius=8,
                 padding=ft.padding.symmetric(horizontal=10, vertical=6),
                 border=ft.border.all(1, ft.Colors.GREY_200),
@@ -506,7 +506,7 @@ def Signup_view(page: ft.Page):
                             "OPTIONAL",
                             size=9,
                             weight=ft.FontWeight.W_700,
-                            color=ft.Colors.WHITE,
+                            color=ft.Colors.ON_PRIMARY,
                         ),
                         bgcolor=ft.Colors.GREY_400,
                         border_radius=4,
@@ -528,7 +528,7 @@ def Signup_view(page: ft.Page):
                             "OPTIONAL",
                             size=9,
                             weight=ft.FontWeight.W_700,
-                            color=ft.Colors.WHITE,
+                            color=ft.Colors.ON_PRIMARY,
                         ),
                         bgcolor=ft.Colors.GREY_400,
                         border_radius=4,
@@ -579,7 +579,7 @@ def Signup_view(page: ft.Page):
     Signup_form = ft.Container(
         width=get_container_width(),
         padding=ft.padding.symmetric(horizontal=32, vertical=28),
-        bgcolor=ft.Colors.WHITE,
+        bgcolor=ft.Colors.ON_PRIMARY,
         border_radius=16,
         shadow=ft.BoxShadow(
             blur_radius=24,
@@ -592,7 +592,7 @@ def Signup_view(page: ft.Page):
 
     return ft.View(
         route="/signup",
-        bgcolor=ft.Colors.GREY_100,
+        bgcolor=ft.Colors.SURFACE,
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         padding=ft.padding.symmetric(horizontal=8),

@@ -150,7 +150,7 @@ async def courses_view(page: ft.Page):
         controls=[
             ft.Text(
                 value="What are we learning Today?",
-                size=23,
+                size=20,
                 weight=ft.FontWeight.BOLD,
                 color=ft.Colors.ON_PRIMARY,) # Themed equivalent of white on primary
         ],

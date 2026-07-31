@@ -1,4 +1,5 @@
 import flet as ft
+import urllib.parse
 from src.components.bottom_appbar import get_bottom_appbar
 
 
@@ -232,7 +233,49 @@ async def profile_view(page: ft.Page):
             rows_data.append(info_row(ft.Icons.ACCOUNT_BALANCE_ROUNDED, "University", university, is_last=True if not streak else False))
     if streak and int(streak) > 0:
             rows_data.append(info_row(ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, "Learning Streak", f"{streak} day" if streak ==1 else f"{streak} days", is_last=True))
-            
+    async def open_whatsapp(e):
+        message = """Just found Nu Age and it's honestly a game changer for studying!
+
+Check it out: nu-age.name.ng
+
+Pro tip: share it with a friend and you unlock extra study hub generations, it's worth it!"""
+        encoded_message = urllib.parse.quote(message)
+        await page.launch_url(f"https://wa.me/?text={encoded_message}")
+
+    rows_data.append(
+    ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.CARD_GIFTCARD, color=ft.Colors.AMBER_600, size=22),
+                ft.Text(
+                    "Like what we do? Share Nu-Age for a gift!",
+                    size=14,
+                    weight=ft.FontWeight.W_500,
+                    expand=True,
+                    color=ft.Colors.ON_SURFACE
+                ),
+                ft.ElevatedButton(
+                    content="Share",
+                    icon=ft.Icons.SHARE,
+                    on_click= open_whatsapp,
+                    style=ft.ButtonStyle(
+                        bgcolor=ft.Colors.GREEN_600,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.padding.symmetric(horizontal=16, vertical=12),
+        bgcolor=ft.Colors.TERTIARY,
+        border_radius=12,
+        border=ft.border.all(1, ft.Colors.GREEN_200),
+    )
+)
+
+         
     info_card = ft.Container(
         bgcolor=CARD_BG,
         border_radius=16,

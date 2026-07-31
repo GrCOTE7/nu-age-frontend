@@ -92,7 +92,7 @@ async def member_profile_view(page: ft.Page, identifier: str):
                     ft.Text(full_name, size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                     # Role pill
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=14, vertical=5),
+                        padding=ft.Padding.symmetric(horizontal=14, vertical=5),
                         bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
                         border_radius=20, border=ft.border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.WHITE)),
                         content=ft.Text(role.title(), size=11, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE)

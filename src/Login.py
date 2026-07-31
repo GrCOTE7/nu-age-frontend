@@ -183,7 +183,7 @@ def login_view(page: ft.Page):
             border_radius=8,
             border_color=ft.Colors.GREY_300,
             focused_border_color=ft.Colors.PRIMARY,
-            content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+            content_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
             on_change=validate_inputs,
             **kwargs,
         )
@@ -479,7 +479,7 @@ def login_view(page: ft.Page):
                 ft.Container(
                     content=validation_error,
                     visible=not(bool(validation_error.value)),
-                    padding=ft.padding.only(left=2, top=0),
+                    padding=ft.Padding.only(left=2, top=0),
                 ),
 
                 # ── Forgot password ───────────────────────────────
@@ -490,7 +490,7 @@ def login_view(page: ft.Page):
                             on_click=reset_forgot_password_modal,
                             style=ft.ButtonStyle(
                                 color=ft.Colors.PRIMARY,
-                                padding=ft.padding.all(0),
+                                padding=ft.Padding.all(0),
                             ),
                         )
                     ],
@@ -512,7 +512,7 @@ def login_view(page: ft.Page):
                             on_click=lambda _: page.go("/signup"),
                             style=ft.ButtonStyle(
                                 color=ft.Colors.PRIMARY,
-                                padding=ft.padding.only(left=4),
+                                padding=ft.Padding.only(left=4),
                             ),
                         ),
                     ],
@@ -529,9 +529,9 @@ def login_view(page: ft.Page):
     # ── page layout ───────────────────────────────────────────────
     def get_view_padding():
         return (
-            ft.padding.symmetric(vertical=80, horizontal=16)
+            ft.Padding.symmetric(vertical=80, horizontal=16)
             if page.width < 600
-            else ft.padding.symmetric(vertical=10, horizontal=16)
+            else ft.Padding.symmetric(vertical=10, horizontal=16)
         )
 
     view=ft.View(

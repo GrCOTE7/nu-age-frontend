@@ -12,7 +12,7 @@ _INPUT = {
     "border_radius": 10,
     "text_size": 13,
     "width": float("inf"),
-    "content_padding": ft.padding.symmetric(horizontal=14, vertical=12),
+    "content_padding": ft.Padding.symmetric(horizontal=14, vertical=12),
 }
 
 # ── section label helper ──────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
             menu_width= 60,
             text_size=13,
             color=ft.Colors.BLACK,
-            content_padding=ft.padding.symmetric(horizontal=14, vertical=12),
+            content_padding=ft.Padding.symmetric(horizontal=14, vertical=12),
             options=[
                 ft.DropdownOption(key="STUDENT", text="Student"),
                 ft.DropdownOption(key="TEACHER", text="Teacher"),
@@ -139,7 +139,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
             }
             bg, fg = cfg.get(role.upper(), (ft.Colors.GREY_100, ft.Colors.GREY_800))
             return ft.Container(
-                padding=ft.padding.symmetric(horizontal=9, vertical=3),
+                padding=ft.Padding.symmetric(horizontal=9, vertical=3),
                 bgcolor=bg,
                 border_radius=10,
                 content=ft.Text(
@@ -155,7 +155,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
             if not pending:
                 pending_list.controls.append(
                     ft.Container(
-                        padding=ft.padding.symmetric(vertical=24),
+                        padding=ft.Padding.symmetric(vertical=24),
                         alignment=ft.Alignment.CENTER,
                         content=ft.Column(
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -185,7 +185,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=12,
                     border=ft.border.all(1, ft.Colors.GREY_100),
-                    padding=ft.padding.symmetric(horizontal=14, vertical=10),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=10),
                     shadow=ft.BoxShadow(
                         blur_radius=4,
                         color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -347,7 +347,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                     border_radius=ft.BorderRadius.only(
                         bottom_left=20, bottom_right=20,
                     ),
-                    padding=ft.padding.only(
+                    padding=ft.Padding.only(
                         top=16, left=8, right=16, bottom=20,
                     ),
                     content=ft.Row(
@@ -397,7 +397,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                         ),
                         offset=ft.Offset(0, 3),
                     ),
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding.all(20),
                     content=ft.Column(
                         spacing=14,
                         controls=[
@@ -466,7 +466,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                         ),
                         offset=ft.Offset(0, 2),
                     ),
-                    padding=ft.padding.all(18),
+                    padding=ft.Padding.all(18),
                     content=ft.Column(
                         spacing=12,
                         controls=[
@@ -492,7 +492,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                                     ),
                                     # live count badge
                                     ft.Container(
-                                        padding=ft.padding.symmetric(
+                                        padding=ft.Padding.symmetric(
                                             horizontal=10, vertical=3,
                                         ),
                                         bgcolor=ft.Colors.ORANGE_50,

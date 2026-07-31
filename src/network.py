@@ -65,7 +65,7 @@ def _avatar(user: dict, radius: int = 24) -> ft.CircleAvatar:
 def _org_pill(label: str) -> ft.Container:
     return ft.Container(
         visible=bool(label), # THE MAGIC: Completely collapses if label is None or empty
-        padding=ft.padding.symmetric(horizontal=8, vertical=3),
+        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         bgcolor=ft.Colors.PRIMARY_CONTAINER,
         border_radius=99,
         content=ft.Text(
@@ -326,7 +326,7 @@ async def network_view(page: ft.Page):
                     ),
                     # name + university + pill
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=10, vertical=8),
+                        padding=ft.Padding.symmetric(horizontal=10, vertical=8),
                         content=ft.Column(
                             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                             spacing=3,
@@ -352,7 +352,7 @@ async def network_view(page: ft.Page):
                     ft.Divider(height=1, color=ft.Colors.GREY_100),
                     # actions
                     ft.Container(
-                        padding=ft.padding.symmetric(vertical=4),
+                        padding=ft.Padding.symmetric(vertical=4),
                         content=ft.Row(
                             alignment=ft.MainAxisAlignment.CENTER,
                             spacing=4,
@@ -435,7 +435,7 @@ async def network_view(page: ft.Page):
             expand=True,
             height=44,
             text_size=13,
-            content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+            content_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
             on_change=on_search,
         )
 
@@ -444,7 +444,7 @@ async def network_view(page: ft.Page):
             spacing=0,
             controls=[
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16),
+                    padding=ft.Padding.symmetric(horizontal=16),
                     content=ft.Row(controls=[search]),
                 ),
                 ft.Container(height=8),
@@ -455,7 +455,7 @@ async def network_view(page: ft.Page):
                         scroll=ft.ScrollMode.AUTO,
                         controls=[
                             ft.Container(
-                                padding=ft.padding.symmetric(horizontal=16, vertical=4),
+                                padding=ft.Padding.symmetric(horizontal=16, vertical=4),
                                 content=grid,
                             ),
                             ft.Container(height=20),
@@ -572,7 +572,7 @@ async def network_view(page: ft.Page):
                 ),
             ),
             ft.Container(
-                padding=ft.padding.symmetric(horizontal=14, vertical=12),
+                padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                 content=ft.Row(
                     spacing=12,
                     vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -631,7 +631,7 @@ async def network_view(page: ft.Page):
                                                 shape=ft.RoundedRectangleBorder(radius=10),
                                                 side=ft.BorderSide(1, ft.Colors.GREY_200),
                                                 color=ft.Colors.GREY_400,
-                                                padding=ft.padding.symmetric(horizontal=12, vertical=0),
+                                                padding=ft.Padding.symmetric(horizontal=12, vertical=0),
                                             ),
                                             on_click=lambda e: page.run_task(on_decline, e),
                                         ),
@@ -657,7 +657,7 @@ async def network_view(page: ft.Page):
                                                     shape=ft.RoundedRectangleBorder(radius=10),
                                                     elevation=0,
                                                     shadow_color=ft.Colors.TRANSPARENT,
-                                                    padding=ft.padding.symmetric(horizontal=12, vertical=0),
+                                                    padding=ft.Padding.symmetric(horizontal=12, vertical=0),
                                                     overlay_color=ft.Colors.with_opacity(0.1, ft.Colors.ON_PRIMARY),
                                                 ),
                                                 on_click=lambda e: page.run_task(on_accept, e),
@@ -737,7 +737,7 @@ async def network_view(page: ft.Page):
             
             # 2. The Main Inner Content
             ft.Container(
-                padding=ft.padding.symmetric(horizontal=14, vertical=12),
+                padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                 content=ft.Column(
                     spacing=12, # Adds clean space between the user info and the button
                     controls=[
@@ -791,7 +791,7 @@ async def network_view(page: ft.Page):
                                     border_radius=8,
                                     height=30,
                                     border=ft.border.all(1, ft.Colors.GREY_300),
-                                    padding=ft.padding.symmetric(horizontal=10, vertical=0),
+                                    padding=ft.Padding.symmetric(horizontal=10, vertical=0),
                                     content=ft.TextButton(
                                         ref=btn_ref,
                                         content=ft.Text("Cancel", size=11,
@@ -822,7 +822,7 @@ async def network_view(page: ft.Page):
                 expand=True, scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                         content=ft.Column(
                             spacing=16,
                             controls=[
@@ -833,7 +833,7 @@ async def network_view(page: ft.Page):
                                     controls=[
                                         _section_label("Incoming Requests"),
                                         ft.Container(
-                                            padding=ft.padding.symmetric(horizontal=7, vertical=2),
+                                            padding=ft.Padding.symmetric(horizontal=7, vertical=2),
                                             bgcolor=ft.Colors.ERROR_CONTAINER,
                                             border_radius=99,
                                             visible=len(incoming_data) > 0,
@@ -846,14 +846,14 @@ async def network_view(page: ft.Page):
                                     ],
                                 ),
                                 incoming_col if incoming_data else ft.Container(
-                                    padding=ft.padding.symmetric(vertical=16),
+                                    padding=ft.Padding.symmetric(vertical=16),
                                     content=ft.Text("No pending requests.",
                                                     size=13, color=ft.Colors.GREY_400),
                                 ),
                                 ft.Divider(height=1, color=ft.Colors.GREY_100),
                                 _section_label("Sent Requests"),
                                 sent_col if sent_data else ft.Container(
-                                    padding=ft.padding.symmetric(vertical=16),
+                                    padding=ft.Padding.symmetric(vertical=16),
                                     content=ft.Text("No sent requests.",
                                                     size=13, color=ft.Colors.GREY_400),
                                 ),
@@ -953,7 +953,7 @@ async def network_view(page: ft.Page):
             ),
             # body
             ft.Container(
-                padding=ft.padding.only(left=10, right=10, top=6, bottom=12),
+                padding=ft.Padding.only(left=10, right=10, top=6, bottom=12),
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=4,
@@ -977,7 +977,7 @@ async def network_view(page: ft.Page):
                             controls=[
                                 _org_pill(org),
                                 ft.Container(
-                                    padding=ft.padding.symmetric(horizontal=6, vertical=3),
+                                    padding=ft.Padding.symmetric(horizontal=6, vertical=3),
                                     bgcolor=ft.Colors.SURFACE,
                                     border_radius=99,
                                     content=ft.Row(
@@ -1019,7 +1019,7 @@ async def network_view(page: ft.Page):
         def _horizontal_row(title: str, users: list, subtitle: str = "") -> ft.Container:
             if not users:
                 body = ft.Container(
-                    padding=ft.padding.symmetric(vertical=12),
+                    padding=ft.Padding.symmetric(vertical=12),
                     content=ft.Text("Nothing to show here yet.",
                                     size=13, color=ft.Colors.GREY_400),
                 )
@@ -1053,7 +1053,7 @@ async def network_view(page: ft.Page):
                 scroll=ft.ScrollMode.AUTO,
                 controls=[
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                         content=ft.Column(
                             spacing=20,
                             controls=[

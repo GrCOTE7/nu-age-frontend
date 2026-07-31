@@ -262,7 +262,7 @@ def render_preview_video_block(value, lesson):
                         weight=ft.FontWeight.BOLD,
                         size=16,
                     ),
-                    padding=ft.padding.symmetric(horizontal=15, vertical=10),
+                    padding=ft.Padding.symmetric(horizontal=15, vertical=10),
                     gradient=ft.LinearGradient(
                         begin=ft.Alignment.TOP_CENTER,
                         end=ft.Alignment.BOTTOM_CENTER,
@@ -747,7 +747,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
         content=ft.Column(
             [
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16, vertical=12),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=12),
                     border=ft.border.only(bottom=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                     content=ft.Row(
                         [
@@ -818,7 +818,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
                 ft.Row(
                     [
                         ft.Container(
-                            padding=ft.padding.symmetric(horizontal=10, vertical=4),
+                            padding=ft.Padding.symmetric(horizontal=10, vertical=4),
                             border_radius=999,
                             bgcolor=ft.Colors.with_opacity(0.10, UI_ACCENT),
                             content=ft.Text(f"Module {m_idx + 1}", size=11, weight=ft.FontWeight.BOLD, color=UI_ACCENT),
@@ -885,7 +885,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
         content=ft.Column(
             [
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16, vertical=12),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=12),
                     bgcolor=ft.Colors.SURFACE,
                     border=ft.border.only(bottom=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                     content=ft.Row(
@@ -910,7 +910,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
                 ),
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=16, vertical=20),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=20),
                     content=ft.Column(
                         [preview_body_column],
                         scroll=ft.ScrollMode.AUTO,
@@ -935,7 +935,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
 
     def lesson_badge(t: str):
         return ft.Container(
-            padding=ft.padding.symmetric(horizontal=8, vertical=4),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=4),
             border_radius=999,
             bgcolor=ft.Colors.with_opacity(0.10, lesson_color(t)),
             content=ft.Text(
@@ -1934,7 +1934,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
             )
 
         return ft.Container(
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             border_radius=12,
             bgcolor=ft.Colors.ON_PRIMARY,
             border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
@@ -2274,7 +2274,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
 
         curriculum_column.controls.append(
             ft.Container(
-                padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                 border_radius=12,
                 bgcolor=ft.Colors.SURFACE,
                 border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
@@ -2289,7 +2289,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
         # down the page as more modules are appended above it.
         curriculum_column.controls.append(
             ft.Container(
-                padding=ft.padding.symmetric(horizontal=4, vertical=20),
+                padding=ft.Padding.symmetric(horizontal=4, vertical=20),
                 content=ft.Row([publish_btn], alignment=ft.MainAxisAlignment.END),
             )
         )

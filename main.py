@@ -269,7 +269,7 @@ async def main(page: ft.Page):
                         bgcolor=ft.Colors.OUTLINE,
             margin=ft.margin.only(top=14),
             border_radius=ft.BorderRadius(top_left=15,top_right=15, bottom_left=None, bottom_right=None),
-            padding=ft.padding.symmetric(horizontal=4, vertical=6),
+            padding=ft.Padding.symmetric(horizontal=4, vertical=6),
             border=ft.border.only(top=ft.BorderSide(1, ft.Colors.OUTLINE)),
             animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
                         opacity=0.35
@@ -404,7 +404,7 @@ async def main(page: ft.Page):
         return ft.Column(
             controls=[
                 shimmer_box(radius=16, height=90),
-                ft.Container(content=chat_list, expand=True, padding=ft.padding.only(top=12, bottom=8)),
+                ft.Container(content=chat_list, expand=True, padding=ft.Padding.only(top=12, bottom=8)),
                 _bottom_navbar(),
             ],
             spacing=16,
@@ -444,7 +444,7 @@ async def main(page: ft.Page):
         )
 
         return ft.Column(
-            controls=[banner, tabs, ft.Container(content=grid, expand=True, padding=ft.padding.only(top=8)),
+            controls=[banner, tabs, ft.Container(content=grid, expand=True, padding=ft.Padding.only(top=8)),
                       _bottom_navbar()],
             spacing=16,
             expand=True,
@@ -477,7 +477,7 @@ async def main(page: ft.Page):
                 expand=True,
             ),
             expand=4,  # ~38% of the row's width — a third, slightly bigger
-            padding=ft.padding.only(right=16),
+            padding=ft.Padding.only(right=16),
         )
 
         breadcrumb = ft.Row(
@@ -558,7 +558,7 @@ async def main(page: ft.Page):
         panels = ft.Row([list_panel(), list_panel()], spacing=20, expand=True)
 
         return ft.Column(
-            controls=[banner, stat_pills, ft.Container(content=panels, expand=True, padding=ft.padding.only(top=8)),
+            controls=[banner, stat_pills, ft.Container(content=panels, expand=True, padding=ft.Padding.only(top=8)),
                       _bottom_navbar()],
             spacing=18,
             expand=True,
@@ -605,7 +605,7 @@ async def main(page: ft.Page):
                 ft.Container(height=8),
                 quick_actions,
                 toggle_row,
-                ft.Container(content=detail_rows, expand=True, padding=ft.padding.only(top=8)),
+                ft.Container(content=detail_rows, expand=True, padding=ft.Padding.only(top=8)),
                 _bottom_navbar(),
             ],
             spacing=18,
@@ -651,7 +651,7 @@ async def main(page: ft.Page):
             controls=[
                 shimmer_box(radius=16, height=64),
                 tabs, search,
-                ft.Container(content=grid, expand=True, padding=ft.padding.only(top=8)),
+                ft.Container(content=grid, expand=True, padding=ft.Padding.only(top=8)),
                 _bottom_navbar(),
             ],
             spacing=16,

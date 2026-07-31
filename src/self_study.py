@@ -56,7 +56,7 @@ def _card(content, padding=16) -> ft.Container:
 
 def _pill(label, bg, fg) -> ft.Container:
     return ft.Container(
-        padding=ft.padding.symmetric(horizontal=9, vertical=3),
+        padding=ft.Padding.symmetric(horizontal=9, vertical=3),
         bgcolor=bg, border_radius=10,
         content=ft.Text(label, size=10, color=fg, weight=ft.FontWeight.W_600),
     )
@@ -234,7 +234,7 @@ async def self_study_view(page: ft.Page):
     # ─────────────────────────────────────────────────────────────────────────
     plan_badge = ft.Container(
         width=60, height=22,
-        padding=ft.padding.symmetric(horizontal=8, vertical=3),
+        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         border_radius=8,
         content=ft.Text("", size=8, weight=ft.FontWeight.W_700),
     )
@@ -247,7 +247,7 @@ async def self_study_view(page: ft.Page):
         visible=False, width=float("inf"), border_radius=10,
         border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.ORANGE_400)),
         bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ORANGE_400),
-        padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        padding=ft.Padding.symmetric(horizontal=12, vertical=10),
         content=ft.Column(
             spacing=6,
             controls=[
@@ -326,7 +326,7 @@ async def self_study_view(page: ft.Page):
                 ),
                 bgcolor=ft.Colors.with_opacity(0.06, ft.Colors.PRIMARY)
                 if is_selected else ft.Colors.SURFACE,
-                padding=ft.padding.symmetric(horizontal=10, vertical=8),
+                padding=ft.Padding.symmetric(horizontal=10, vertical=8),
                 ink=True,
                 data=mat_id,
                 content=ft.Row(
@@ -406,7 +406,7 @@ async def self_study_view(page: ft.Page):
     def _sidebar_header(icon, label, trailing=None):
         return ft.Container(
             border_radius=12,
-            padding=ft.padding.only(left=14, right=10, top=10, bottom=10),
+            padding=ft.Padding.only(left=14, right=10, top=10, bottom=10),
             border=ft.border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.ON_PRIMARY)),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment.CENTER_LEFT,
@@ -467,7 +467,7 @@ async def self_study_view(page: ft.Page):
                         spacing=0,
                         controls=[
                             ft.Container(
-                                padding=ft.padding.symmetric(
+                                padding=ft.Padding.symmetric(
                                     horizontal=12, vertical=12
                                 ),
                                 content=ft.Column(
@@ -773,7 +773,7 @@ async def self_study_view(page: ft.Page):
     gen_status_icon = ft.Icon(ft.Icons.CHECK_CIRCLE_ROUNDED, color=ft.Colors.GREEN_600, size=16)
     
     generation_banner = ft.Container(
-        padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        padding=ft.Padding.symmetric(horizontal=12, vertical=10),
         bgcolor=ft.Colors.GREEN_50,
         border_radius=10,
         border=ft.border.all(1, ft.Colors.GREEN_200),
@@ -889,7 +889,7 @@ async def self_study_view(page: ft.Page):
                 end=ft.Alignment.BOTTOM_RIGHT,
                 colors=[ft.Colors.PRIMARY, ft.Colors.SECONDARY],
             ),
-            padding=ft.padding.symmetric(horizontal=20, vertical=16),
+            padding=ft.Padding.symmetric(horizontal=20, vertical=16),
             content=ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
@@ -976,7 +976,7 @@ async def self_study_view(page: ft.Page):
             border_radius=8,
             bgcolor=ft.Colors.with_opacity(0.07, ft.Colors.PRIMARY),
             border=ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PRIMARY)),
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             content=ft.Row(
                 spacing=8,
                 controls=[
@@ -1001,7 +1001,7 @@ async def self_study_view(page: ft.Page):
             scroll=ft.ScrollMode.AUTO,
             controls=[
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16, vertical=16),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=16),
                     content=ft.Column(
                         spacing=16,
                         controls=[
@@ -1062,7 +1062,7 @@ async def self_study_view(page: ft.Page):
             border_radius=10, border_color=ft.Colors.GREY_300,
             focused_border_color=ft.Colors.PRIMARY,
             text_size=13,
-            content_padding=ft.padding.symmetric(horizontal=14, vertical=12),
+            content_padding=ft.Padding.symmetric(horizontal=14, vertical=12),
         )
         text_field = ft.TextField(
             label="Paste your notes here",
@@ -1070,7 +1070,7 @@ async def self_study_view(page: ft.Page):
             border_radius=10, border_color=ft.Colors.GREY_300,
             focused_border_color=ft.Colors.PRIMARY,
             text_size=13,
-            content_padding=ft.padding.symmetric(horizontal=14, vertical=12),
+            content_padding=ft.Padding.symmetric(horizontal=14, vertical=12),
         )
         error_text  = ft.Text("", color=ft.Colors.RED_700, size=12, visible=False)
         status_text = ft.Text("", color=ft.Colors.TEAL_600, size=12, visible=False)
@@ -1084,7 +1084,7 @@ async def self_study_view(page: ft.Page):
             visible=at_limit,
             border_radius=8,
             bgcolor=ft.Colors.RED_50,
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             content=ft.Text(
                 "Limit Reached! Upgrade your plan to add more materials.", # <-- Change this text to whatever you want!
                 size=12, color=ft.Colors.RED_700,
@@ -1242,7 +1242,7 @@ async def self_study_view(page: ft.Page):
                             border_radius=10,
                             width=float("inf"),
                             border=ft.border.all(1, ft.Colors.GREY_300),
-                            padding=ft.padding.symmetric(horizontal=14, vertical=12),
+                            padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                             ink=True,
                             on_click=pick_file,
                             content=ft.Row(
@@ -1401,7 +1401,7 @@ async def self_study_view(page: ft.Page):
             visible=at_gen_limit,
             border_radius=8,
             bgcolor=ft.Colors.RED_50,
-            padding=ft.padding.symmetric(horizontal=12, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             content=ft.Text(
                 "Limit Reached! Upgrade your plan to generate more.", # <-- Change this text to whatever you want!
                 size=12, color=ft.Colors.RED_700,
@@ -1411,7 +1411,7 @@ async def self_study_view(page: ft.Page):
 
         remaining_chip = ft.Container(
             visible=state["gen_lim"] is not None and not at_gen_limit,
-            padding=ft.padding.symmetric(horizontal=8, vertical=3),
+            padding=ft.Padding.symmetric(horizontal=8, vertical=3),
             bgcolor=ft.Colors.with_opacity(0.08, ft.Colors.PURPLE_400),
             border_radius=8,
             content=ft.Text(
@@ -1512,7 +1512,7 @@ async def self_study_view(page: ft.Page):
             expand=True,
             border_radius=16,
             border=ft.border.all(1, ft.Colors.GREY_200),
-            padding=ft.padding.symmetric(horizontal=24, vertical=32),
+            padding=ft.Padding.symmetric(horizontal=24, vertical=32),
             shadow=ft.BoxShadow(blur_radius=12,
                                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
                                 offset=ft.Offset(0, 4)),
@@ -1647,7 +1647,7 @@ async def self_study_view(page: ft.Page):
             expand=True,
             controls=[
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16, vertical=10),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=10),
                     content=ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         controls=[progress_bar, ft.Container(width=8),
@@ -1656,7 +1656,7 @@ async def self_study_view(page: ft.Page):
                 ),
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=16, vertical=8),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=8),
                     content=card_face,
                 ),
                 ft.Container(height=24),
@@ -1738,7 +1738,7 @@ async def self_study_view(page: ft.Page):
                     border_radius=10,
                     border=ft.border.all(1, ft.Colors.GREY_200),
                     bgcolor=ft.Colors.SURFACE,
-                    padding=ft.padding.symmetric(horizontal=14, vertical=12),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                     ink=True,
                     data=idx,
                     content=ft.Text(opt, size=13, color=ft.Colors.ON_SURFACE),
@@ -1904,7 +1904,7 @@ async def self_study_view(page: ft.Page):
             expand=True,
             controls=[
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16, vertical=10),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=10),
                     content=ft.Row(
                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                         controls=[
@@ -1921,7 +1921,7 @@ async def self_study_view(page: ft.Page):
                     content=ft.Column(
                         scroll=ft.ScrollMode.AUTO,
                         controls=[ft.Container(
-                            padding=ft.padding.symmetric(horizontal=16, vertical=12),
+                            padding=ft.Padding.symmetric(horizontal=16, vertical=12),
                             content=ft.Column(
                                 spacing=14,
                                 controls=[
@@ -2086,7 +2086,7 @@ async def self_study_view(page: ft.Page):
                     ),
                     bgcolor=(ft.Colors.with_opacity(0.06, ft.Colors.PRIMARY)
                              if selected else ft.Colors.SURFACE),
-                    padding=ft.padding.symmetric(horizontal=14, vertical=12),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                     ink=True,
                     data=idx,
                     content=ft.Row(
@@ -2178,7 +2178,7 @@ async def self_study_view(page: ft.Page):
         exam_header = ft.Container(
             bgcolor=ft.Colors.SURFACE,
             border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
-            padding=ft.padding.symmetric(horizontal=16, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=16, vertical=10),
             content=ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 controls=[
@@ -2264,7 +2264,7 @@ async def self_study_view(page: ft.Page):
                     border=ft.border.all(1, ft.Colors.GREEN_300 if right
                                          else ft.Colors.RED_200),
                     bgcolor=ft.Colors.GREEN_50 if right else ft.Colors.RED_50,
-                    padding=ft.padding.symmetric(horizontal=14, vertical=10),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=10),
                     content=ft.Column(spacing=4, controls=[
                         ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -2322,7 +2322,7 @@ async def self_study_view(page: ft.Page):
                         expand=True,
                         scroll=ft.ScrollMode.AUTO,
                         controls=[ft.Container(
-                            padding=ft.padding.symmetric(horizontal=24, vertical=24),
+                            padding=ft.Padding.symmetric(horizontal=24, vertical=24),
                             content=ft.Column(
                                 spacing=20,
                                 controls=[
@@ -2397,7 +2397,7 @@ async def self_study_view(page: ft.Page):
                     content=ft.Column(
                         scroll=ft.ScrollMode.AUTO,
                         controls=[ft.Container(
-                            padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                            padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                             content=ft.Column(
                                 spacing=14,
                                 controls=[
@@ -2455,7 +2455,7 @@ async def self_study_view(page: ft.Page):
             sidebar_container.visible = state["sidebar_open"]
             
             # Push content right (300px) to make room for the sidebar
-            main_content_wrapper.padding = ft.padding.only(left=300 if state["sidebar_open"] else 0)
+            main_content_wrapper.padding = ft.Padding.only(left=300 if state["sidebar_open"] else 0)
         else:
             sidebar_container.shadow = ft.BoxShadow(blur_radius=20, color=ft.Colors.BLACK26)
             sidebar_container.visible = state["sidebar_open"]

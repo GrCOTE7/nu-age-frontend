@@ -20,7 +20,7 @@ _INPUT = {
     "border_radius": 10,
     "width": float("inf"),
     "text_size": 13,
-    "content_padding": ft.padding.symmetric(horizontal=14, vertical=12),
+    "content_padding": ft.Padding.symmetric(horizontal=14, vertical=12),
 }
 
 # ── section label helper ──────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ async def organisations_view(page: ft.Page):
         def stat_card(icon_name, title, value, bg_color):
             return ft.Container(
                 bgcolor=bg_color,
-                padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                 border_radius=14,
                 col={"xs": 6, "sm": 2.4},
                 shadow=ft.BoxShadow(
@@ -139,7 +139,7 @@ async def organisations_view(page: ft.Page):
             initials = f'{member.get("first_name","?")[0]}{member.get("last_name","?")[0]}'.upper()
 
             return ft.Container(
-                padding=ft.padding.symmetric(vertical=8, horizontal=4),
+                padding=ft.Padding.symmetric(vertical=8, horizontal=4),
                 border_radius=8,
                 content=ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -171,7 +171,7 @@ async def organisations_view(page: ft.Page):
                             spacing=6,
                             controls=[
                                 ft.Container(
-                                    padding=ft.padding.symmetric(horizontal=9, vertical=3),
+                                    padding=ft.Padding.symmetric(horizontal=9, vertical=3),
                                     bgcolor=badge_bg,
                                     border_radius=10,
                                     content=ft.Text(member_role, size=7, color=badge_fg, weight=ft.FontWeight.W_700),
@@ -201,7 +201,7 @@ async def organisations_view(page: ft.Page):
 
             def badge(label, bg, fg):
                 return ft.Container(
-                    padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                    padding=ft.Padding.symmetric(horizontal=8, vertical=3),
                     bgcolor=bg, border_radius=10,
                     content=ft.Text(label, size=9, color=fg, weight=ft.FontWeight.W_600),
                 )
@@ -222,7 +222,7 @@ async def organisations_view(page: ft.Page):
                         ),
                         ft.Container(
                             expand=True,
-                            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
                             content=ft.Column(
                                 spacing=4,
                                 controls=[
@@ -306,7 +306,7 @@ async def organisations_view(page: ft.Page):
                     ft.Container(
                         bgcolor=theme_color,
                         border_radius=ft.BorderRadius.only(top_left=16, top_right=16),
-                        padding=ft.padding.only(top=6, right=6, bottom=48, left=16),
+                        padding=ft.Padding.only(top=6, right=6, bottom=48, left=16),
                         alignment=ft.Alignment.TOP_RIGHT,
                         content=ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -327,7 +327,7 @@ async def organisations_view(page: ft.Page):
                     ),
                     # Info area
                     ft.Container(
-                        padding=ft.padding.only(left=20, right=20, bottom=16),
+                        padding=ft.Padding.only(left=20, right=20, bottom=16),
                         content=ft.Column(
                             spacing=8,
                             controls=[
@@ -390,7 +390,7 @@ async def organisations_view(page: ft.Page):
             controls=[
                 header_card,
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=16),
+                    padding=ft.Padding.symmetric(horizontal=16),
                     content=ft.Column(
                         spacing=16,
                         controls=[
@@ -618,7 +618,7 @@ async def organisations_view(page: ft.Page):
                 controls=[
                     # ── Top bar ───────────────────────────────────────────────
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                         content=ft.Row(
                             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                             controls=[
@@ -636,7 +636,7 @@ async def organisations_view(page: ft.Page):
 
                     # ── Form fields ───────────────────────────────────────────
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=20, vertical=16),
+                        padding=ft.Padding.symmetric(horizontal=20, vertical=16),
                         content=ft.Column(
                             spacing=14,
                             controls=[
@@ -650,7 +650,7 @@ async def organisations_view(page: ft.Page):
                                 _section_label("LOGO"),
                                 ft.Container(
                                     width=float("inf"),
-                                    padding=ft.padding.symmetric(vertical=18, horizontal=12),
+                                    padding=ft.Padding.symmetric(vertical=18, horizontal=12),
                                     border=ft.border.all(1, ft.Colors.GREY_300),
                                     border_radius=10,
                                     ink=True,
@@ -665,7 +665,7 @@ async def organisations_view(page: ft.Page):
                                 _section_label("BRAND COLOUR"),
                                 ft.Container(
                                     width=float("inf"),
-                                    padding=ft.padding.symmetric(vertical=14, horizontal=12),
+                                    padding=ft.Padding.symmetric(vertical=14, horizontal=12),
                                     border=ft.border.all(1, ft.Colors.GREY_300),
                                     border_radius=10,
                                     content=ft.Column(
@@ -818,7 +818,7 @@ async def organisations_view(page: ft.Page):
             }
             bg, fg = colour_map.get(role_label.upper(), (ft.Colors.GREY_100, ft.Colors.GREY_700))
             return ft.Container(
-                padding=ft.padding.symmetric(horizontal=9, vertical=3),
+                padding=ft.Padding.symmetric(horizontal=9, vertical=3),
                 bgcolor=bg,
                 border_radius=20,
                 content=ft.Text(role_label, size=10, color=fg, weight=ft.FontWeight.W_600),
@@ -909,7 +909,7 @@ async def organisations_view(page: ft.Page):
                             ),
                             ft.Container(
                                 expand=True,
-                                padding=ft.padding.symmetric(horizontal=14, vertical=12),
+                                padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                                 content=ft.Column(
                                     spacing=6,
                                     controls=[
@@ -925,7 +925,7 @@ async def organisations_view(page: ft.Page):
                                                     overflow=ft.TextOverflow.ELLIPSIS,
                                                 ),
                                                 ft.Container(
-                                                    padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                                                    padding=ft.Padding.symmetric(horizontal=8, vertical=3),
                                                     bgcolor=status_bg,
                                                     border_radius=10,
                                                     content=ft.Text(
@@ -994,7 +994,7 @@ async def organisations_view(page: ft.Page):
                         ft.Container(
                             bgcolor=theme_color,
                             border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-                            padding=ft.padding.only(top=8, left=8, right=16, bottom=20),
+                            padding=ft.Padding.only(top=8, left=8, right=16, bottom=20),
                             content=ft.Column(
                                 spacing=6,
                                 controls=[
@@ -1006,7 +1006,7 @@ async def organisations_view(page: ft.Page):
                                                 icon_size=22,
                                                 on_click=lambda _: page.run_task(show_org_list),
                                             ),ft.Container(
-                                        padding=ft.padding.only(left=16),
+                                        padding=ft.Padding.only(left=16),
                                         content=ft.Column(
                                             spacing=4,
                                             controls=[
@@ -1027,7 +1027,7 @@ async def organisations_view(page: ft.Page):
                         # ── Courses section ──────────────────────────────────
                         ft.Container(
                             expand=True,
-                            padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                            padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                             content=ft.Column(
                                 expand=True,
                                 spacing=12,
@@ -1107,7 +1107,7 @@ async def organisations_view(page: ft.Page):
                             bgcolor=theme_color,
                         ),
                         ft.Container(
-                            padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                            padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                             content=ft.Column(
                                 spacing=12,
                                 controls=[
@@ -1180,7 +1180,7 @@ async def organisations_view(page: ft.Page):
             return ft.ListView(
                 expand=True,
                 spacing=12,
-                padding=ft.padding.symmetric(horizontal=16, vertical=16),
+                padding=ft.Padding.symmetric(horizontal=16, vertical=16),
                 controls=[org_card(org) for org in memberships],
             )
 
@@ -1194,7 +1194,7 @@ async def organisations_view(page: ft.Page):
         #          navigates to the real /create-course route.
         freelance_content = ft.Container(
             expand=True,
-            padding=ft.padding.symmetric(horizontal=16, vertical=16),
+            padding=ft.Padding.symmetric(horizontal=16, vertical=16),
             content=ft.Column(
                 expand=True,
                 spacing=0,
@@ -1309,7 +1309,7 @@ async def organisations_view(page: ft.Page):
                 end=ft.Alignment(1, 1),
                 colors=[ft.Colors.PRIMARY, ft.Colors.with_opacity(0.78, ft.Colors.PRIMARY)],
             ),
-            padding=ft.padding.only(left=20, right=20, top=18, bottom=16),
+            padding=ft.Padding.only(left=20, right=20, top=18, bottom=16),
             content=ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -1353,7 +1353,7 @@ async def organisations_view(page: ft.Page):
                     ),
                     # Org count chip
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=12, vertical=6),
+                        padding=ft.Padding.symmetric(horizontal=12, vertical=6),
                         bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
                         border_radius=20,
                         border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.WHITE)),

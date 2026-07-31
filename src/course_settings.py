@@ -480,7 +480,7 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
 
                     enrollment_list_view.controls.append(
                         ft.Container(
-                            padding=ft.padding.symmetric(vertical=5),
+                            padding=ft.Padding.symmetric(vertical=5),
                             content=ft.Row([
                                 cb,
                                 ft.Column(
@@ -569,7 +569,7 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
                         ft.Container(
                             bgcolor=ft.Colors.RED_50,
                             border_radius=8,
-                            padding=ft.padding.all(10),
+                            padding=ft.Padding.all(10),
                             content=ft.Row(
                                 spacing=8,
                                 controls=[
@@ -690,7 +690,7 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
                 header,
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding.all(20),
                     content=ft.Column(
                         scroll=ft.ScrollMode.AUTO,
                         spacing=_SECTION_SPACING,

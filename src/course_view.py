@@ -13,7 +13,7 @@ async def course_details_view(page: ft.Page, course_id: str, course_name: str):
     # ── content socket ────────────────────────────────────────────────────────
     content_socket = ft.Container(
         expand=True,
-        padding=ft.padding.only(top=24),
+        padding=ft.Padding.only(top=24),
         alignment=ft.Alignment.CENTER,
         content=ft.Column(
             alignment=ft.MainAxisAlignment.CENTER,
@@ -164,7 +164,7 @@ async def course_details_view(page: ft.Page, course_id: str, course_name: str):
             # ── helpers ───────────────────────────────────────────────────
             def pill(label, bg, fg):
                 return ft.Container(
-                    padding=ft.padding.symmetric(horizontal=9, vertical=3),
+                    padding=ft.Padding.symmetric(horizontal=9, vertical=3),
                     bgcolor=bg, border_radius=10,
                     content=ft.Text(label, size=10, color=fg,
                                     weight=ft.FontWeight.W_600),
@@ -318,7 +318,7 @@ async def course_details_view(page: ft.Page, course_id: str, course_name: str):
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=14,
                     border=ft.border.all(1, ft.Colors.GREY_200),
-                    padding=ft.padding.symmetric(horizontal=18, vertical=16),
+                    padding=ft.Padding.symmetric(horizontal=18, vertical=16),
                     shadow=ft.BoxShadow(
                         blur_radius=6,
                         color=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
@@ -335,7 +335,7 @@ async def course_details_view(page: ft.Page, course_id: str, course_name: str):
                     cover,
 
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=16, vertical=16),
+                        padding=ft.Padding.symmetric(horizontal=16, vertical=16),
                         content=ft.Column(
                             spacing=16,
                             controls=[
@@ -397,7 +397,7 @@ async def course_details_view(page: ft.Page, course_id: str, course_name: str):
 
                                 # Enrol row
                                 ft.Container(
-                                    padding=ft.padding.only(top=4, bottom=24),
+                                    padding=ft.Padding.only(top=4, bottom=24),
                                     content=ft.Column(
                                         spacing=8,
                                         controls=[

@@ -43,7 +43,7 @@ from src.components.bottom_appbar import get_bottom_appbar
 
 def _pill(label: str, bg, fg) -> ft.Container:
     return ft.Container(
-        padding=ft.padding.symmetric(horizontal=8, vertical=3),
+        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         bgcolor=bg,
         border_radius=10,
         content=ft.Text(label, size=10, color=fg, weight=ft.FontWeight.W_600),
@@ -105,7 +105,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
             border=ft.border.all(1, ft.Colors.GREY_200),
-            padding=ft.padding.symmetric(horizontal=14, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             shadow=ft.BoxShadow(
                 blur_radius=8,
                 color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -147,7 +147,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
             border=ft.border.all(1, ft.Colors.GREY_200),
-            padding=ft.padding.symmetric(horizontal=14, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             content=ft.Row(
                 spacing=12,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -168,7 +168,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                         ],
                     ),
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=8, vertical=4),
+                        padding=ft.Padding.symmetric(horizontal=8, vertical=4),
                         bgcolor=ft.Colors.GREEN_50,
                         border_radius=8,
                         content=ft.Text("Live", size=10, color=ft.Colors.GREEN_700, weight=ft.FontWeight.W_600),
@@ -220,7 +220,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
             border=ft.border.all(1, ft.Colors.GREY_200),
-            padding=ft.padding.all(14),
+            padding=ft.Padding.all(14),
             content=ft.Column(
                 spacing=10,
                 controls=[
@@ -277,7 +277,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
 
         return ft.Container(
             bgcolor=ft.Colors.GREY_50 if is_even else ft.Colors.SURFACE,
-            padding=ft.padding.symmetric(horizontal=12, vertical=10),
+            padding=ft.Padding.symmetric(horizontal=12, vertical=10),
             border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             content=ft.Row(
                 spacing=10,
@@ -376,7 +376,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                     # Table header
                     ft.Container(
                         bgcolor=ft.Colors.SURFACE,
-                        padding=ft.padding.symmetric(horizontal=12, vertical=8),
+                        padding=ft.Padding.symmetric(horizontal=12, vertical=8),
                         border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
                         content=ft.Row(
                             controls=[
@@ -393,7 +393,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
             )
             if students
             else ft.Container(
-                padding=ft.padding.symmetric(vertical=36),
+                padding=ft.Padding.symmetric(vertical=36),
                 alignment=ft.Alignment.CENTER,
                 content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -415,7 +415,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                 ft.Container(
                     bgcolor=theme_color,
                     border_radius=ft.BorderRadius.only(bottom_left=20, bottom_right=20),
-                    padding=ft.padding.only(left=8, right=16, top=8, bottom=16),
+                    padding=ft.Padding.only(left=8, right=16, top=8, bottom=16),
                     content=ft.Column(
                         spacing=6,
                         controls=[
@@ -443,7 +443,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                             ),
                             # Tags flush below
                             ft.Container(
-                                padding=ft.padding.only(left=12),
+                                padding=ft.Padding.only(left=12),
                                 content=ft.Row(
                                     spacing=6,
                                     wrap=True,
@@ -457,7 +457,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                 # ── Scrollable body ────────────────────────────────────────────
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=16, vertical=14),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                     content=ft.Column(
                         expand=True,
                         scroll=ft.ScrollMode.AUTO,

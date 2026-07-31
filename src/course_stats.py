@@ -51,7 +51,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
             bgcolor=SURFACE,
             border_radius=14,
             border=ft.border.all(1, GREY_200),
-            padding=ft.padding.all(16),
+            padding=ft.Padding.all(16),
             shadow=ft.BoxShadow(
                 blur_radius=8,
                 color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -93,7 +93,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
         return ft.Container(
             bgcolor=bg,
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=14, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=8),
             content=ft.Row(
                 tight=True, spacing=8,
                 controls=[
@@ -147,7 +147,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
                 bottom_left=30, 
                 bottom_right=30
             ),
-            padding=ft.padding.only(left=20, right=20, top=24, bottom=28),
+            padding=ft.Padding.only(left=20, right=20, top=24, bottom=28),
             content=ft.Column(
                 spacing=6,
                 controls=[
@@ -229,7 +229,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
             bgcolor=SURFACE,
             border_radius=14,
             border=ft.border.all(1, GREY_200),
-            padding=ft.padding.all(16),
+            padding=ft.Padding.all(16),
             shadow=ft.BoxShadow(
                 blur_radius=8,
                 color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -294,7 +294,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
                 bgcolor=GOLD_BG,
                 border_radius=14,
                 border=ft.border.all(1, ft.Colors.with_opacity(0.2, GOLD)),
-                padding=ft.padding.all(16),
+                padding=ft.Padding.all(16),
                 content=ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
@@ -337,7 +337,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
             controls=[
                 header,
                 ft.Container(
-                    padding=ft.padding.only(left=16, right=16, top=20, bottom=32),
+                    padding=ft.Padding.only(left=16, right=16, top=20, bottom=32),
                     content=ft.Column(
                         spacing=16,
                         controls=[

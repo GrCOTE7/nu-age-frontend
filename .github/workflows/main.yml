@@ -12,6 +12,20 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Check for deprecated Flet 0.84-style API usage
+        run: |
+          # Fail in seconds, not minutes. ft.padding.*, ft.alignment.*, ft.margin.*
+          # were lowercase-module/function-style helpers in 0.84 and were replaced
+          # by capitalized classes with keyword-only args in 0.85/0.86 (V1 breaking
+          # changes). If these still appear anywhere, the APK build WILL crash later
+          # with an AttributeError deep in the Dart/Python bridge trace — better to
+          # catch it here, before Flutter SDK install and Gradle even start.
+          if grep -rn "ft\.padding\.\|ft\.alignment\.\|ft\.margin\." --include="*.py" .; then
+            echo "::error::Found 0.84-style Flet API calls (see lines above). These break on flet>=0.85. Either migrate to ft.Padding/ft.Alignment/ft.Margin, or add a compatibility shim before this check will pass intentionally."
+            exit 1
+          fi
+          echo "No deprecated 0.84-style API calls found."
+
       - name: Setup Java (Required for Android)
         uses: actions/setup-java@v4
         with:
@@ -73,7 +87,15 @@ jobs:
       - name: Compile the APK
         run: |
           set -o pipefail
-          yes | flet build apk --product "Nu Age" --verbose 2>&1 | tee flet_build.log || true
+          # --arch arm64-v8a restricts native libs/Python dist to a single ABI.
+          # Without this, flet build apk defaults to bundling arm64-v8a + x86_64 +
+          # armeabi-v7a, roughly tripling the native-lib payload — this was the
+          # direct cause of the 188MB APK (vs <100MB when scoped to one ABI).
+          # arm64-v8a alone covers virtually all real Android hardware from the
+          # last ~6 years; x86_64 is only useful for emulators and armeabi-v7a is
+          # legacy 32-bit devices. Add more archs back here only if you have a
+          # concrete reason to ship them.
+          yes | flet build apk --product "Nu Age" --arch arm64-v8a --verbose 2>&1 | tee flet_build.log || true
           if ! grep -q "Successfully built your .apk for Android" flet_build.log; then
             echo "::error::CRITICAL ERROR: Flet compiler crashed! Check verbose logs for Dart/Python errors."
             exit 1

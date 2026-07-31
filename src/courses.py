@@ -140,7 +140,7 @@ async def courses_view(page: ft.Page):
     height=80, 
 
     border_radius=ft.border_radius.only(bottom_left=30, bottom_right=30),
-    padding=ft.padding.only(top=10, left=25, right=25, bottom=20),
+    padding=ft.Padding.only(top=10, left=25, right=25, bottom=20),
     gradient=ft.LinearGradient(
             begin=ft.Alignment.TOP_LEFT,
             end=ft.Alignment.BOTTOM_RIGHT,

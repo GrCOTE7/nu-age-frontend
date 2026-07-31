@@ -263,7 +263,7 @@ def Signup_view(page: ft.Page):
             border_radius=8,
             border_color=ft.Colors.GREY_300,
             focused_border_color=ft.Colors.PRIMARY,
-            content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+            content_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
             on_change=validate_inputs,
             **kwargs,
         )
@@ -285,7 +285,7 @@ def Signup_view(page: ft.Page):
         border_radius=8,
         border_color=ft.Colors.GREY_300,
         focused_border_color=ft.Colors.PRIMARY,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        content_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
         expand=True,
     )
 
@@ -300,7 +300,7 @@ def Signup_view(page: ft.Page):
         border_radius=8,
         border_color=ft.Colors.GREY_300,
         focused_border_color=ft.Colors.PRIMARY,
-        content_padding=ft.padding.symmetric(horizontal=14, vertical=10),
+        content_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
         expand=True,
         options=[],
         disabled=True,
@@ -482,7 +482,7 @@ def Signup_view(page: ft.Page):
                 content=role_selection,
                 bgcolor=ft.Colors.SURFACE,
                 border_radius=8,
-                padding=ft.padding.symmetric(horizontal=10, vertical=6),
+                padding=ft.Padding.symmetric(horizontal=10, vertical=6),
                 border=ft.border.all(1, ft.Colors.GREY_200),
             ),
 
@@ -492,7 +492,7 @@ def Signup_view(page: ft.Page):
                 content=gender_selection,
                 bgcolor=ft.Colors.SURFACE,
                 border_radius=8,
-                padding=ft.padding.symmetric(horizontal=10, vertical=6),
+                padding=ft.Padding.symmetric(horizontal=10, vertical=6),
                 border=ft.border.all(1, ft.Colors.GREY_200),
             ),
 
@@ -510,7 +510,7 @@ def Signup_view(page: ft.Page):
                         ),
                         bgcolor=ft.Colors.GREY_400,
                         border_radius=4,
-                        padding=ft.padding.symmetric(horizontal=5, vertical=2),
+                        padding=ft.Padding.symmetric(horizontal=5, vertical=2),
                     ),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -532,7 +532,7 @@ def Signup_view(page: ft.Page):
                         ),
                         bgcolor=ft.Colors.GREY_400,
                         border_radius=4,
-                        padding=ft.padding.symmetric(horizontal=5, vertical=2),
+                        padding=ft.Padding.symmetric(horizontal=5, vertical=2),
                     ),
                 ],
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -544,7 +544,7 @@ def Signup_view(page: ft.Page):
             ft.Container(
                 content=validation_error,
                 visible=True,
-                padding=ft.padding.only(top=2),
+                padding=ft.Padding.only(top=2),
             ),
 
             # ── Terms ─────────────────────────────────────────────
@@ -562,7 +562,7 @@ def Signup_view(page: ft.Page):
                         on_click=lambda e: page.go("/login"),
                         style=ft.ButtonStyle(
                             color=ft.Colors.PRIMARY,
-                            padding=ft.padding.only(left=4),
+                            padding=ft.Padding.only(left=4),
                         ),
                     ),
                 ],
@@ -578,7 +578,7 @@ def Signup_view(page: ft.Page):
     # ── form card ─────────────────────────────────────────────────
     Signup_form = ft.Container(
         width=get_container_width(),
-        padding=ft.padding.symmetric(horizontal=32, vertical=28),
+        padding=ft.Padding.symmetric(horizontal=32, vertical=28),
         bgcolor=ft.Colors.ON_PRIMARY,
         border_radius=16,
         shadow=ft.BoxShadow(
@@ -595,7 +595,7 @@ def Signup_view(page: ft.Page):
         bgcolor=ft.Colors.SURFACE,
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        padding=ft.padding.symmetric(horizontal=8),
+        padding=ft.Padding.symmetric(horizontal=8),
         scroll=ft.ScrollMode.AUTO,
         controls=[Signup_form],
         appbar=get_landing_appbar(page),

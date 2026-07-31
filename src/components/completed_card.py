@@ -47,7 +47,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
 
     # ── Completion badge (CHECK_CIRCLE — LMS industry standard) ───────────────
     completion_badge = ft.Container(
-        padding=ft.padding.symmetric(horizontal=9, vertical=4),
+        padding=ft.Padding.symmetric(horizontal=9, vertical=4),
         bgcolor=BADGE_BG,
         border_radius=20,
         content=ft.Row(
@@ -147,7 +147,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
 
     # ── Card body ─────────────────────────────────────────────────────────────
     card_body = ft.Container(
-        padding=ft.padding.only(left=14, right=14, top=12, bottom=14),
+        padding=ft.Padding.only(left=14, right=14, top=12, bottom=14),
         content=ft.Column(
             spacing=10,
             controls=[

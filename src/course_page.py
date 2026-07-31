@@ -194,7 +194,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             controls=[
                 # --- Sidebar header bar ---
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=12, vertical=10),
+                    padding=ft.Padding.symmetric(horizontal=12, vertical=10),
                     border=ft.border.only(
                         bottom=ft.border.BorderSide(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_PRIMARY))
                     ),
@@ -214,7 +214,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 ),
                 # --- Course identity + progress strip ---
                 ft.Container(
-                    padding=ft.padding.only(left=14, right=14, top=14, bottom=10),
+                    padding=ft.Padding.only(left=14, right=14, top=14, bottom=10),
                     bgcolor=UI_ACCENT,
                     content=ft.Column(
                         [
@@ -294,7 +294,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             desktop_controls.append(
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.all(20),
+                    padding=ft.Padding.all(20),
                     content=main_content_area,
                 )
             )
@@ -314,7 +314,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 [
                     ft.Container(
                         expand=True,
-                        padding=ft.padding.all(12),
+                        padding=ft.Padding.all(12),
                         content=main_content_area,
                     ),
                     sidebar_container,
@@ -359,7 +359,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                             weight=ft.FontWeight.BOLD,
                             size=16,
                         ),
-                        padding=ft.padding.symmetric(horizontal=15, vertical=10),
+                        padding=ft.Padding.symmetric(horizontal=15, vertical=10),
                         gradient=ft.LinearGradient(
                             begin=ft.Alignment.TOP_CENTER,
                             end=ft.Alignment.BOTTOM_CENTER,
@@ -837,7 +837,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
 
         lesson_type = les.get("type", "")
         type_badge = ft.Container(
-            padding=ft.padding.symmetric(horizontal=6, vertical=2),
+            padding=ft.Padding.symmetric(horizontal=6, vertical=2),
             border_radius=4,
             bgcolor=ft.Colors.with_opacity(0.08, UI_ACCENT) if is_active_lesson else ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY),
             content=ft.Text(
@@ -860,7 +860,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 left=ft.border.BorderSide(3, UI_ACCENT if is_active_lesson else ft.Colors.TRANSPARENT),
                 bottom=ft.border.BorderSide(1, ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY)),
             ),
-            padding=ft.padding.symmetric(horizontal=14, vertical=11),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=11),
             content=ft.Column(
                 [
                     ft.Row(
@@ -940,7 +940,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
 
                     cert_action_container = ft.Container(
                         content=cert_loading_indicator,
-                        padding=ft.padding.symmetric(vertical=10),
+                        padding=ft.Padding.symmetric(vertical=10),
                     )
 
                     def close_dialog_and_go(e=None):
@@ -960,7 +960,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                             content=ft.Column(
                                 [
                                     ft.Container(
-                                        padding=ft.padding.symmetric(horizontal=30, vertical=28),
+                                        padding=ft.Padding.symmetric(horizontal=30, vertical=28),
                                         gradient=ft.LinearGradient(
                                             begin=ft.Alignment.TOP_LEFT,
                                             end=ft.Alignment.BOTTOM_RIGHT,
@@ -982,7 +982,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                         ),
                                     ),
                                     ft.Container(
-                                        padding=ft.padding.symmetric(horizontal=28, vertical=18),
+                                        padding=ft.Padding.symmetric(horizontal=28, vertical=18),
                                         content=ft.Column(
                                             [
                                                 ft.Container(height=18),
@@ -992,7 +992,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                         ),
                                     ),
                                     ft.Container(
-                                        padding=ft.padding.only(left=28, right=28, bottom=24),
+                                        padding=ft.Padding.only(left=28, right=28, bottom=24),
                                         content=ft.TextButton("Return to Dashboard", style=ft.ButtonStyle(color=ft.Colors.ON_SURFACE_VARIANT), on_click=close_dialog_and_go),
                                     ),
                                 ],
@@ -1027,7 +1027,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                         
                         if "error" in res:
                             cert_action_container.content = ft.Container(
-                                padding=ft.padding.symmetric(vertical=8, horizontal=12),
+                                padding=ft.Padding.symmetric(vertical=8, horizontal=12),
                                 border_radius=10, bgcolor=ft.Colors.RED_50, border=ft.border.all(1, ft.Colors.RED_200),
                                 content=ft.Column(
                                     spacing=10, 
@@ -1064,7 +1064,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                         on_click=handle_cert_download, expand=True,
                                     ),
                                     ft.Container(
-                                        padding=ft.padding.symmetric(horizontal=12, vertical=8), border_radius=8,
+                                        padding=ft.Padding.symmetric(horizontal=12, vertical=8), border_radius=8,
                                         bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY), border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
                                         content=ft.Row(
                                             [
@@ -1183,8 +1183,8 @@ async def course_learner_view(page: ft.Page, course_id: str):
                     expanded=module_expanded_state.get(mod["id"], False),
                     on_change=lambda e, module_id=mod["id"]: handle_module_tile_change(e, module_id),
                     maintain_state=True,
-                    tile_padding=ft.padding.symmetric(horizontal=14, vertical=4),
-                    controls_padding=ft.padding.only(left=0, right=0, bottom=0),
+                    tile_padding=ft.Padding.symmetric(horizontal=14, vertical=4),
+                    controls_padding=ft.Padding.only(left=0, right=0, bottom=0),
                     collapsed_bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_PRIMARY),
                     bgcolor=ft.Colors.with_opacity(0.03, ft.Colors.ON_PRIMARY),
                     collapsed_text_color=ft.Colors.ON_SURFACE,
@@ -1342,7 +1342,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                     chart_sections.append(fch.PieChartSection(value=incorrect_count, color=ft.Colors.RED_500, radius=22, title=" "))
 
                 analytics_chart_ui = ft.Container(
-                    padding=ft.padding.symmetric(vertical=14),
+                    padding=ft.Padding.symmetric(vertical=14),
                     content=ft.Row(
                         [
                             ft.Container(
@@ -1430,7 +1430,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                     ),
                                 ),
                                 ft.Container(
-                                    padding=ft.padding.symmetric(horizontal=20), expand=True,
+                                    padding=ft.Padding.symmetric(horizontal=20), expand=True,
                                     content=ft.Column(
                                         controls=[
                                             analytics_chart_ui,
@@ -1441,7 +1441,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                     ),
                                 ),
                                 ft.Container(
-                                    padding=ft.padding.symmetric(horizontal=20, vertical=16), border=ft.border.only(top=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+                                    padding=ft.Padding.symmetric(horizontal=20, vertical=16), border=ft.border.only(top=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                                     content=ft.Row(
                                         [
                                             ft.OutlinedButton("Retry Assessment", icon=ft.Icons.REPLAY_ROUNDED, on_click=close_and_retry) if not passed else ft.Container(),
@@ -1471,7 +1471,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         total_lessons = len(active_mod["lessons"])
 
         header_container = ft.Container(
-            padding=ft.padding.symmetric(horizontal=20, vertical=18),
+            padding=ft.Padding.symmetric(horizontal=20, vertical=18),
             border_radius=HEADER_RADIUS,
             bgcolor=ft.Colors.SURFACE,
             border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
@@ -1482,7 +1482,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                             ft.Text(active_mod["title"].upper(), size=11, weight=ft.FontWeight.BOLD, color=UI_ACCENT),
                             ft.Text("·", color=ft.Colors.ON_SURFACE_VARIANT, size=11),
                             ft.Container(
-                                padding=ft.padding.symmetric(horizontal=8, vertical=4), border_radius=999, bgcolor=ft.Colors.with_opacity(0.10, UI_ACCENT),
+                                padding=ft.Padding.symmetric(horizontal=8, vertical=4), border_radius=999, bgcolor=ft.Colors.with_opacity(0.10, UI_ACCENT),
                                 content=ft.Row([ft.Icon(get_lesson_type_icon(active_les["type"]), size=11, color=UI_ACCENT), ft.Text(get_lesson_type_label(active_les["type"]), size=10, weight=ft.FontWeight.BOLD, color=UI_ACCENT)], spacing=4, tight=True),
                             ),
                             ft.Text(f"{lesson_number} of {total_lessons}", size=11, color=ft.Colors.ON_SURFACE_VARIANT, weight=ft.FontWeight.W_500),
@@ -1518,12 +1518,12 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 action_footer_controls.append(ft.Row([action_button], spacing=0))
 
         action_footer_container.content = ft.Container(
-            padding=ft.padding.only(top=16), border=ft.border.only(top=ft.border.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
+            padding=ft.Padding.only(top=16), border=ft.border.only(top=ft.border.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
             content=ft.Column(action_footer_controls, spacing=10, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         )
 
         main_content_area.content = ft.Container(
-            padding=ft.padding.all(16), border_radius=16, bgcolor=ft.Colors.SURFACE,
+            padding=ft.Padding.all(16), border_radius=16, bgcolor=ft.Colors.SURFACE,
             shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY), offset=ft.Offset(0, 2)),
             content=ft.Column([lesson_body_scroll, action_footer_container], expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         )

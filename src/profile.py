@@ -142,7 +142,7 @@ async def profile_view(page: ft.Page):
                 ),
                 # Role pill
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=14, vertical=5),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=5),
                     bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.ON_PRIMARY),
                     border_radius=20,
                     border=ft.border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.ON_PRIMARY)),
@@ -268,7 +268,7 @@ Pro tip: share it with a friend and you unlock extra study hub generations, it's
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
         ),
-        padding=ft.padding.symmetric(horizontal=16, vertical=12),
+        padding=ft.Padding.symmetric(horizontal=16, vertical=12),
         bgcolor=ft.Colors.TERTIARY,
         border_radius=12,
         border=ft.border.all(1, ft.Colors.GREEN_200),

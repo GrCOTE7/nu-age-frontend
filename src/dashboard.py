@@ -59,7 +59,7 @@ async def dashboard_view(page: ft.Page):
             colors=[ft.Colors.PRIMARY, ft.Colors.SECONDARY],
         ),
         border_radius=ft.BorderRadius.only(bottom_left=28, bottom_right=28),
-        padding=ft.padding.only(left=22, right=22, top=14, bottom=22),
+        padding=ft.Padding.only(left=22, right=22, top=14, bottom=22),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -81,7 +81,7 @@ async def dashboard_view(page: ft.Page):
             expand=True,
             bgcolor=bg,
             border_radius=14,
-            padding=ft.padding.symmetric(horizontal=14, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             ink=True,
             on_click=lambda _, r=route: page.go(r),
             shadow=ft.BoxShadow(
@@ -203,7 +203,7 @@ async def dashboard_view(page: ft.Page):
                             on_click=lambda _: page.go("/network"),
                             style=ft.ButtonStyle(
                                 color=ft.Colors.PRIMARY,
-                                padding=ft.padding.all(0),
+                                padding=ft.Padding.all(0),
                             ),
                         ),
                     ],
@@ -221,7 +221,7 @@ async def dashboard_view(page: ft.Page):
             expand=True,
             bgcolor=bg,
             border_radius=14,
-            padding=ft.padding.symmetric(horizontal=14, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             ink=True,
             on_click=lambda _, r=route: page.go(r),
             border=ft.border.all(1, ft.Colors.OUTLINE),
@@ -262,7 +262,7 @@ async def dashboard_view(page: ft.Page):
                             on_click=lambda _: page.go("/self-study"),
                             style=ft.ButtonStyle(
                                 color=ft.Colors.PRIMARY,
-                                padding=ft.padding.all(0),
+                                padding=ft.Padding.all(0),
                             ),
                         ),
                     ],
@@ -392,7 +392,7 @@ async def dashboard_view(page: ft.Page):
                                 "View All",
                                 on_click=lambda _: page.go("/courses"),
                                 style=ft.ButtonStyle(color=ft.Colors.PRIMARY,
-                                                     padding=ft.padding.all(0)),
+                                                     padding=ft.Padding.all(0)),
                             ),
                         ],
                     ),
@@ -534,7 +534,7 @@ async def dashboard_view(page: ft.Page):
                             spacing=0,
                             controls=[
                                 ft.Container(
-                                    padding=ft.padding.symmetric(
+                                    padding=ft.Padding.symmetric(
                                         horizontal=16, vertical=16
                                     ),
                                     content=ft.Column(

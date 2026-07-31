@@ -48,7 +48,7 @@ def get_course_card(
 
     # ── category pill ─────────────────────────────────────────────────────────
     category_pill = ft.Container(
-        padding=ft.padding.symmetric(horizontal=8, vertical=3),
+        padding=ft.Padding.symmetric(horizontal=8, vertical=3),
         bgcolor=ft.Colors.SURFACE,
         border_radius=10,
         content=ft.Text(
@@ -114,7 +114,7 @@ def get_course_card(
 
                 # ── Body ───────────────────────────────────────────────────
                 ft.Container(
-                    padding=ft.padding.only(left=12, right=12, top=10, bottom=12),
+                    padding=ft.Padding.only(left=12, right=12, top=10, bottom=12),
                     content=ft.Column(
                         spacing=8,
                         controls=[

@@ -95,7 +95,7 @@ def member_invite_view(page: ft.Page, token: str):
     # ── Component Layout Construction ─────────────────────────────────────────
     invite_card = ft.Container(
         width=400,
-        padding=ft.padding.symmetric(horizontal=32, vertical=40),
+        padding=ft.Padding.symmetric(horizontal=32, vertical=40),
         bgcolor=CARD_BG,
         border_radius=20,
         alignment=ft.Alignment.CENTER,
@@ -126,6 +126,6 @@ def member_invite_view(page: ft.Page, token: str):
         bgcolor=PAGE_BG,
         vertical_alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-        padding=ft.padding.all(16),
+        padding=ft.Padding.all(16),
         controls=[invite_card]
     )

@@ -22,7 +22,8 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          flutter-version: '3.41.4'   # match what flet-cli 0.84.0 expects
+          # No pinned version — flet-cli will auto-install whatever
+          # SDK it actually needs for 0.85.1; we auto-confirm below.
 
       - name: Accept Android SDK Licenses
         run: |
@@ -37,14 +38,34 @@ jobs:
       - name: Install Build Tools
         run: |
           python -m pip install --upgrade pip
-          pip install flet-cli==0.84.0 flet==0.84.0 flet-video==0.84.0 flet-charts==0.84.0 httpx==0.28.1 requests==2.32.3
+          # Matched set: these were the actual versions released
+          # together in May — flet-charts/flet-video never had a
+          # real stable 0.84.0, only a dev pre-release.
+          pip install flet-cli==0.85.1 flet==0.85.1 flet-video==0.85.1 flet-charts==0.85.1 httpx==0.28.1 requests==2.32.3
+
+      - name: Clean Flet build cache
+        run: rm -rf build .flet_build ~/.flet 2>/dev/null || true
 
       - name: Compile the APK
         run: |
-          if ! yes | flet build apk --product "Nu Age" --verbose; then
+          set -o pipefail
+          # yes| auto-confirms the Flutter SDK swap prompt if flet
+          # needs a specific Flutter/Dart version we don't have yet
+          if ! yes | flet build apk --product "Nu Age" --verbose --build-verbose 2>&1 | tee flet_build.log; then
             echo "::error::CRITICAL ERROR: Flet compiler crashed! Check verbose logs for Dart/Python errors."
             exit 1
           fi
+
+      - name: Show extra logs on failure
+        if: failure()
+        run: tail -n 400 flet_build.log || true
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-failure-logs
+          path: flet_build.log
 
       - name: Rename the APK file
         run: |

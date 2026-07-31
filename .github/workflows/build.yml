@@ -14,7 +14,7 @@ jobs:
 
       - name: Check for deprecated Flet 0.84-style API usage
         run: |
-          # Fail in seconds, not minutes. ft.padding.*, ft.alignment.*, ft.margin.*
+          # Fail in seconds, not minutes. ft.Padding.*, ft.alignment.*, ft.Margin.*
           # were lowercase-module/function-style helpers in 0.84 and were replaced
           # by capitalized classes with keyword-only args in 0.85/0.86 (V1 breaking
           # changes). If these still appear anywhere, the APK build WILL crash later

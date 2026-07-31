@@ -267,7 +267,7 @@ async def main(page: ft.Page):
         return ft.Container(
             height=60,
                         bgcolor=ft.Colors.OUTLINE,
-            margin=ft.margin.only(top=14),
+            margin=ft.Margin.only(top=14),
             border_radius=ft.BorderRadius(top_left=15,top_right=15, bottom_left=None, bottom_right=None),
             padding=ft.Padding.symmetric(horizontal=4, vertical=6),
             border=ft.border.only(top=ft.BorderSide(1, ft.Colors.OUTLINE)),
@@ -1013,7 +1013,7 @@ async def main(page: ft.Page):
                 duration=3000,  # ms — auto-dismisses, no action needed from the user
                 behavior=ft.SnackBarBehavior.FLOATING,
                 shape=ft.RoundedRectangleBorder(radius=10),
-                margin=ft.margin.only(left=20, right=20, bottom=20),
+                margin=ft.Margin.only(left=20, right=20, bottom=20),
             )
             page.overlay.append(snack)
             snack.open = True

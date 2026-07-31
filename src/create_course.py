@@ -14,7 +14,7 @@ _INPUT = {
     "cursor_color": ft.Colors.PRIMARY,
     "border_radius": 10,
     "text_size": 13,
-    "content_padding": ft.padding.symmetric(horizontal=14, vertical=12),
+    "content_padding": ft.Padding.symmetric(horizontal=14, vertical=12),
 }
 
 def _section_label(text: str) -> ft.Text:
@@ -63,7 +63,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
         # ── badges ────────────────────────────────────────────────────────────
         def pill(label, bg, fg):
             return ft.Container(
-                padding=ft.padding.symmetric(horizontal=8, vertical=3),
+                padding=ft.Padding.symmetric(horizontal=8, vertical=3),
                 bgcolor=bg, border_radius=10,
                 content=ft.Text(label, size=10, color=fg, weight=ft.FontWeight.W_600),
             )
@@ -97,7 +97,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
                 elevation=0,
-                padding=ft.padding.symmetric(vertical=0, horizontal=8),
+                padding=ft.Padding.symmetric(vertical=0, horizontal=8),
             ),
             on_click=lambda e, cid=course_id: page.go(f"/courses/{cid}/manage"),
         )
@@ -118,7 +118,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
             style=ft.ButtonStyle(
                 shape=ft.RoundedRectangleBorder(radius=8),
                 side=ft.BorderSide(1, theme_color),
-                padding=ft.padding.symmetric(vertical=0, horizontal=8),
+                padding=ft.Padding.symmetric(vertical=0, horizontal=8),
             ),
             on_click=lambda e, oid=org_id, cid=course_id: page.go(
     f"/organisations/{oid}/courses/{cid}/analytics"
@@ -161,7 +161,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
 
                     # ── Card body ─────────────────────────────────────────────
                     ft.Container(
-                        padding=ft.padding.only(left=14, right=6, top=12, bottom=14),
+                        padding=ft.Padding.only(left=14, right=6, top=12, bottom=14),
                         content=ft.Column(
                             spacing=8,
                             controls=[
@@ -225,7 +225,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
             courses_grid.controls.append(
                 ft.Container(
                     col=12,
-                    padding=ft.padding.symmetric(vertical=60),
+                    padding=ft.Padding.symmetric(vertical=60),
                     alignment=ft.Alignment.CENTER,
                     content=ft.Column(
                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -340,7 +340,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
 
         image_picker_container = ft.Container(
             width=float("inf"),
-            padding=ft.padding.symmetric(vertical=18),
+            padding=ft.Padding.symmetric(vertical=18),
             border=ft.border.all(1, ft.Colors.GREY_300),
             border_radius=10,
             ink=True,
@@ -505,7 +505,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                 ft.Container(
                     bgcolor=theme_color,
                     border_radius=ft.BorderRadius.only(bottom_left=24, bottom_right=24),
-                    padding=ft.padding.only(left=20, right=20, top=14, bottom=20),
+                    padding=ft.Padding.only(left=20, right=20, top=14, bottom=20),
                     content=ft.Column(
                         spacing=12,
                         controls=[
@@ -550,7 +550,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                 # ── Grid ──────────────────────────────────────────────────────
                 ft.Container(
                     expand=True,
-                    padding=ft.padding.symmetric(horizontal=16, vertical=16),
+                    padding=ft.Padding.symmetric(horizontal=16, vertical=16),
                     content=ft.Column(
                         expand=True,
                         scroll=ft.ScrollMode.AUTO,

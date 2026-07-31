@@ -386,7 +386,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
 
                 # ── invite form card ───────────────────────────────
                 ft.Container(
-                    margin=ft.margin.symmetric(horizontal=16),
+                    margin=ft.Margin.symmetric(horizontal=16),
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=14,
                     border=ft.border.all(1, ft.Colors.GREY_200),
@@ -455,7 +455,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
 
                 # ── pending invites section ────────────────────────
                 ft.Container(
-                    margin=ft.margin.symmetric(horizontal=16),
+                    margin=ft.Margin.symmetric(horizontal=16),
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=14,
                     border=ft.border.all(1, ft.Colors.GREY_200),

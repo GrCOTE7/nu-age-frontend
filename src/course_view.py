@@ -205,7 +205,7 @@ async def course_details_view(page: ft.Page, course_id: str, course_name: str):
                     controls=[
                         ft.Container(
                             width=6, height=6,
-                            margin=ft.margin.only(top=6),
+                            margin=ft.Margin.only(top=6),
                             bgcolor=ft.Colors.PRIMARY,
                             border_radius=3,
                         ),

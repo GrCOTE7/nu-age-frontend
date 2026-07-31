@@ -1094,7 +1094,7 @@ async def chat_view(page: ft.Page) -> ft.View:
                         controls=[user_list_col],
                         expand=True,
                         spacing=0,
-                        padding=ft.padding.symmetric(horizontal=16),
+                        padding=ft.Padding.symmetric(horizontal=16),
                     ),
                 ),
             ],

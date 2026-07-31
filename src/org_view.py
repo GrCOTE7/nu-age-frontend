@@ -211,7 +211,7 @@ async def organisations_view(page: ft.Page):
                 bgcolor=ft.Colors.SURFACE,
                 border_radius=12,
                 clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-                margin=ft.margin.only(bottom=2),
+                margin=ft.Margin.only(bottom=2),
                 content=ft.Row(
                     spacing=0,
                     controls=[
@@ -293,7 +293,7 @@ async def organisations_view(page: ft.Page):
 
         # ── header card ───────────────────────────────────────────────────────
         header_card = ft.Container(
-            margin=ft.margin.symmetric(horizontal=16, vertical=10),
+            margin=ft.Margin.symmetric(horizontal=16, vertical=10),
             bgcolor=ft.Colors.SURFACE,
             border_radius=16,
             border=ft.border.all(1, ft.Colors.GREY_200),
@@ -332,7 +332,7 @@ async def organisations_view(page: ft.Page):
                             spacing=8,
                             controls=[
                                 ft.Container(
-                                    margin=ft.margin.only(top=-40),
+                                    margin=ft.Margin.only(top=-40),
                                     content=ft.CircleAvatar(
                                         radius=42,
                                         bgcolor=ft.Colors.WHITE,
@@ -893,7 +893,7 @@ async def organisations_view(page: ft.Page):
                         color=ft.Colors.with_opacity(0.07, ft.Colors.BLACK),
                         offset=ft.Offset(0, 2),
                     ),
-                    margin=ft.margin.only(bottom=2),
+                    margin=ft.Margin.only(bottom=2),
                     ink=True,
                     on_click=lambda e, cid=cid: page.go(
                         f"/courses/{cid}/manage"

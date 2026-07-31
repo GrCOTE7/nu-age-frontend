@@ -77,7 +77,7 @@ def _org_pill(label: str) -> ft.Container:
 
 def _section_label(text: str) -> ft.Container:
     return ft.Container(
-        margin=ft.margin.only(bottom=4),
+        margin=ft.Margin.only(bottom=4),
         content=ft.Row(
             spacing=10,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -185,7 +185,7 @@ async def network_view(page: ft.Page):
     seg_labels = ["My Network", "Requests", "Discover"]
 
     seg_row = ft.Container(
-        margin=ft.margin.symmetric(horizontal=16, vertical=10),
+        margin=ft.Margin.symmetric(horizontal=16, vertical=10),
         bgcolor=ft.Colors.ON_PRIMARY,
         border_radius=12,
         padding=ft.Padding.all(4),
@@ -322,7 +322,7 @@ async def network_view(page: ft.Page):
                             border=ft.border.all(3, ft.Colors.ON_PRIMARY),
                             border_radius=32,
                         ),
-                        margin=ft.margin.only(top=-30),
+                        margin=ft.Margin.only(top=-30),
                     ),
                     # name + university + pill
                     ft.Container(
@@ -949,7 +949,7 @@ async def network_view(page: ft.Page):
                     border=ft.border.all(3, ft.Colors.SURFACE),
                     border_radius=30,
                 ),
-                margin=ft.margin.only(top=-26),
+                margin=ft.Margin.only(top=-26),
             ),
             # body
             ft.Container(

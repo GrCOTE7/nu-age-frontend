@@ -180,7 +180,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         width=SIDEBAR_WIDTH,
         bgcolor=ft.Colors.SURFACE,
         border=ft.Border.only(
-            right=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.10, ft.Colors.ON_PRIMARY))
+            right=ft.BorderSide(1, ft.Colors.with_opacity(0.10, ft.Colors.ON_PRIMARY))
         ),
         shadow=ft.BoxShadow(
             blur_radius=10,
@@ -196,7 +196,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 ft.Container(
                     padding=ft.Padding.symmetric(horizontal=12, vertical=10),
                     border=ft.Border.only(
-                        bottom=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_PRIMARY))
+                        bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_PRIMARY))
                     ),
                     bgcolor=ft.Colors.SURFACE,
                     content=ft.Row(
@@ -857,8 +857,8 @@ async def course_learner_view(page: ft.Page, course_id: str):
             on_click=handle_click if is_unlocked else None,
             bgcolor=ft.Colors.with_opacity(0.06, UI_ACCENT) if is_active_lesson else ft.Colors.SURFACE,
             border=ft.Border.only(
-                left=ft.Border.BorderSide(3, UI_ACCENT if is_active_lesson else ft.Colors.TRANSPARENT),
-                bottom=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY)),
+                left=ft.BorderSide(3, UI_ACCENT if is_active_lesson else ft.Colors.TRANSPARENT),
+                bottom=ft.BorderSide(1, ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY)),
             ),
             padding=ft.Padding.symmetric(horizontal=14, vertical=11),
             content=ft.Column(
@@ -1441,7 +1441,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                     ),
                                 ),
                                 ft.Container(
-                                    padding=ft.Padding.symmetric(horizontal=20, vertical=16), border=ft.Border.only(top=ft.Border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+                                    padding=ft.Padding.symmetric(horizontal=20, vertical=16), border=ft.Border.only(top=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                                     content=ft.Row(
                                         [
                                             ft.OutlinedButton("Retry Assessment", icon=ft.Icons.REPLAY_ROUNDED, on_click=close_and_retry) if not passed else ft.Container(),
@@ -1518,7 +1518,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 action_footer_controls.append(ft.Row([action_button], spacing=0))
 
         action_footer_container.content = ft.Container(
-            padding=ft.Padding.only(top=16), border=ft.Border.only(top=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
+            padding=ft.Padding.only(top=16), border=ft.Border.only(top=ft.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
             content=ft.Column(action_footer_controls, spacing=10, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         )
 

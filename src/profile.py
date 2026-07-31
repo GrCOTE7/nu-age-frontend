@@ -234,14 +234,14 @@ async def profile_view(page: ft.Page):
     if streak and int(streak) > 0:
             rows_data.append(info_row(ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, "Learning Streak", f"{streak} day" if streak ==1 else f"{streak} days", is_last=True))
     async def open_whatsapp(e):
-        message = """Just found Nu Age and it's honestly a game changer for studying!
+        message = """Just found Nu Age and it's honestly a game changer for studying! It has highly paid courses, an AI tutor and quality tutors!
 
-Check it out: nu-age.name.ng
+Check it out 👉 : nu-age.name.ng
 
 Pro tip: share it with a friend and you unlock extra study hub generations, it's worth it!"""
         encoded_message = urllib.parse.quote(message)
         await page.launch_url(f"https://wa.me/?text={encoded_message}")
-
+    rows_data.append(ft.Container(height=15))
     rows_data.append(
     ft.Container(
         content=ft.Row(

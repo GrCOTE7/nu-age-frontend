@@ -739,7 +739,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
         offset=ft.Offset(1, 0),
         animate_offset=ft.Animation(280, ft.AnimationCurve.DECELERATE),
         bgcolor=ft.Colors.SURFACE,
-        border=ft.Border.only(left=ft.Border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+        border=ft.Border.only(left=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
         shadow=ft.BoxShadow(
             blur_radius=18,
             color=ft.Colors.with_opacity(0.18, ft.Colors.ON_SURFACE),
@@ -748,7 +748,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
             [
                 ft.Container(
                     padding=ft.Padding.symmetric(horizontal=16, vertical=12),
-                    border=ft.Border.only(bottom=ft.Border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+                    border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                     content=ft.Row(
                         [
                             ft.Text("Edit Lesson", size=18, weight=ft.FontWeight.BOLD),
@@ -887,7 +887,7 @@ async def course_builder_view(page: ft.Page, course_id: str):
                 ft.Container(
                     padding=ft.Padding.symmetric(horizontal=16, vertical=12),
                     bgcolor=ft.Colors.SURFACE,
-                    border=ft.Border.only(bottom=ft.Border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+                    border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                     content=ft.Row(
                         [
                             ft.Row(

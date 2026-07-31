@@ -59,11 +59,13 @@ jobs:
         run: rm -rf build .flet_build ~/.flet 2>/dev/null || true
 
       - name: Compile the Windows App
+        env:
+          PYTHONUTF8: "1" # Forces Python to use UTF-8 instead of cp1252 to prevent UI crashes
         run: |
           set -o pipefail
-          # Windows builds default to the host architecture (x64) and do not 
-          # require the Android-specific ABI scoping flags.
-          flet build windows --product "Nu Age" --verbose 2>&1 | tee flet_build.log || true
+          # Windows builds default to the host architecture (x64)
+          # Pipe 'yes' to auto-accept the missing Flutter SDK installation prompt
+          yes | flet build windows --product "Nu Age" --verbose 2>&1 | tee flet_build.log || true
           
           # Use case-insensitive grep to catch the success string universally
           if ! grep -q -i "successfully built" flet_build.log; then

@@ -22,7 +22,7 @@ def _card(content, padding=18) -> ft.Container:
     return ft.Container(
         bgcolor=ft.Colors.SURFACE,
         border_radius=16,
-        border=ft.border.all(1, ft.Colors.GREY_200),
+        border=ft.Border.all(1, ft.Colors.GREY_200),
         padding=padding,
         shadow=ft.BoxShadow(
             blur_radius=8,
@@ -167,7 +167,7 @@ async def dashboard_view(page: ft.Page):
                         width=48, height=48,
                         bgcolor=ft.Colors.SURFACE,
                         border_radius=24,
-                        border=ft.border.all(1, ft.Colors.GREY_300),
+                        border=ft.Border.all(1, ft.Colors.GREY_300),
                         alignment=ft.Alignment.CENTER,
                         ink=True,
                         on_click=lambda _: page.go("/network"),
@@ -224,7 +224,7 @@ async def dashboard_view(page: ft.Page):
             padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             ink=True,
             on_click=lambda _, r=route: page.go(r),
-            border=ft.border.all(1, ft.Colors.OUTLINE),
+            border=ft.Border.all(1, ft.Colors.OUTLINE),
             content=ft.Column(
                 spacing=6,
                 controls=[

@@ -483,7 +483,7 @@ def Signup_view(page: ft.Page):
                 bgcolor=ft.Colors.SURFACE,
                 border_radius=8,
                 padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                border=ft.Border.all(1, ft.Colors.GREY_200),
             ),
 
             # ── Gender ───────────────────────────────────────────
@@ -493,7 +493,7 @@ def Signup_view(page: ft.Page):
                 bgcolor=ft.Colors.SURFACE,
                 border_radius=8,
                 padding=ft.Padding.symmetric(horizontal=10, vertical=6),
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                border=ft.Border.all(1, ft.Colors.GREY_200),
             ),
 
             # ── Organisation (optional) ───────────────────────────

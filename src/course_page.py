@@ -179,8 +179,8 @@ async def course_learner_view(page: ft.Page, course_id: str):
     sidebar_container = ft.Container(
         width=SIDEBAR_WIDTH,
         bgcolor=ft.Colors.SURFACE,
-        border=ft.border.only(
-            right=ft.border.BorderSide(1, ft.Colors.with_opacity(0.10, ft.Colors.ON_PRIMARY))
+        border=ft.Border.only(
+            right=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.10, ft.Colors.ON_PRIMARY))
         ),
         shadow=ft.BoxShadow(
             blur_radius=10,
@@ -195,8 +195,8 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 # --- Sidebar header bar ---
                 ft.Container(
                     padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-                    border=ft.border.only(
-                        bottom=ft.border.BorderSide(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_PRIMARY))
+                    border=ft.Border.only(
+                        bottom=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_PRIMARY))
                     ),
                     bgcolor=ft.Colors.SURFACE,
                     content=ft.Row(
@@ -390,7 +390,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             padding=18,
             border_radius=12,
             bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
             content=ft.Column(
                 [
                     ft.Text("Instructor Notes", weight=ft.FontWeight.BOLD, size=15),
@@ -417,7 +417,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         return ft.Container(
             padding=40,
             border_radius=14,
-            border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+            border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
             bgcolor=ft.Colors.SURFACE,
             alignment=ft.Alignment(0, 0),
             content=ft.Column(
@@ -443,7 +443,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             padding=24,
             border_radius=14,
             bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
             content=ft.Markdown(
                 value,
                 selectable=True, 
@@ -453,7 +453,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         code_text_style=ft.TextStyle(font_family="Roboto Mono", size=16),
         codeblock_decoration=ft.BoxDecoration(     # correct field name, fixes the light-mode bg bug
             bgcolor="#0662AD",
-            border_radius=ft.border_radius.all(8),
+            border_radius=ft.BorderRadius.all(8),
         ),
     ),
                   # light background, default Flet uses
@@ -489,7 +489,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             padding=40,
             border_radius=14,
             bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
             alignment=ft.Alignment(0, 0),
             content=ft.Column(
                 [
@@ -609,7 +609,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             padding=20,
             border_radius=12,
             bgcolor=ft.Colors.BLUE_50,
-            border=ft.border.all(1, ft.Colors.BLUE_200),
+            border=ft.Border.all(1, ft.Colors.BLUE_200),
             visible=False, 
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.LIGHTBULB_CIRCLE, color=ft.Colors.BLUE_700), ft.Text("Result", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900)]),
@@ -649,7 +649,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             padding=25,
             border_radius=16,
             bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
             content=ft.Column(
                 [
                     ft.Row([
@@ -756,7 +756,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         border_radius=16,
         # Slightly grey out the background of the card if completed
         bgcolor=ft.Colors.with_opacity(0.02, ft.Colors.ON_PRIMARY) if is_completed else ft.Colors.SURFACE,
-        border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
         content=ft.Column([
             ft.Row(
                 controls=[
@@ -778,7 +778,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         if is_completed:
             banner = [
                 ft.Container(
-                    padding=15, border_radius=12, bgcolor=ft.Colors.GREEN_50, border=ft.border.all(1, ft.Colors.GREEN_200),
+                    padding=15, border_radius=12, bgcolor=ft.Colors.GREEN_50, border=ft.Border.all(1, ft.Colors.GREEN_200),
                     content=ft.Row([
                         ft.Icon(ft.Icons.VERIFIED_ROUNDED, color=ft.Colors.GREEN_600),
                         ft.Text("You have already passed this assessment.", weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_800, size=11)
@@ -856,9 +856,9 @@ async def course_learner_view(page: ft.Page, course_id: str):
             ink=is_unlocked,
             on_click=handle_click if is_unlocked else None,
             bgcolor=ft.Colors.with_opacity(0.06, UI_ACCENT) if is_active_lesson else ft.Colors.SURFACE,
-            border=ft.border.only(
-                left=ft.border.BorderSide(3, UI_ACCENT if is_active_lesson else ft.Colors.TRANSPARENT),
-                bottom=ft.border.BorderSide(1, ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY)),
+            border=ft.Border.only(
+                left=ft.Border.BorderSide(3, UI_ACCENT if is_active_lesson else ft.Colors.TRANSPARENT),
+                bottom=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY)),
             ),
             padding=ft.Padding.symmetric(horizontal=14, vertical=11),
             content=ft.Column(
@@ -1028,7 +1028,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                         if "error" in res:
                             cert_action_container.content = ft.Container(
                                 padding=ft.Padding.symmetric(vertical=8, horizontal=12),
-                                border_radius=10, bgcolor=ft.Colors.RED_50, border=ft.border.all(1, ft.Colors.RED_200),
+                                border_radius=10, bgcolor=ft.Colors.RED_50, border=ft.Border.all(1, ft.Colors.RED_200),
                                 content=ft.Column(
                                     spacing=10, 
                                     controls=[
@@ -1065,7 +1065,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                     ),
                                     ft.Container(
                                         padding=ft.Padding.symmetric(horizontal=12, vertical=8), border_radius=8,
-                                        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY), border=ft.border.all(1, ft.Colors.OUTLINE_VARIANT),
+                                        bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY), border=ft.Border.all(1, ft.Colors.OUTLINE_VARIANT),
                                         content=ft.Row(
                                             [
                                                 ft.Icon(ft.Icons.FINGERPRINT_ROUNDED, size=14, color=ft.Colors.ON_SURFACE_VARIANT),
@@ -1378,7 +1378,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
 
                     breakdown_controls.append(
                         ft.Container(
-                            padding=12, border_radius=8, bgcolor=ft.Colors.with_opacity(0.05, color), border=ft.border.all(1, ft.Colors.with_opacity(0.20, color)),
+                            padding=12, border_radius=8, bgcolor=ft.Colors.with_opacity(0.05, color), border=ft.Border.all(1, ft.Colors.with_opacity(0.20, color)),
                             content=ft.Column(
                                 [
                                     ft.Text(res["question"], weight=ft.FontWeight.W_600, size=13),
@@ -1420,7 +1420,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                         content=ft.Column(
                             [
                                 ft.Container(
-                                    padding=20, bgcolor=score_color, border_radius=ft.border_radius.only(top_left=12, top_right=12),
+                                    padding=20, bgcolor=score_color, border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
                                     content=ft.Column(
                                         [
                                             ft.Row([ft.Icon(status_icon, color=ft.Colors.SURFACE, size=28), ft.Text(f"Assessment {status_text}", weight=ft.FontWeight.BOLD, size=20, color=ft.Colors.SURFACE)], alignment=ft.MainAxisAlignment.CENTER, spacing=8),
@@ -1441,7 +1441,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                     ),
                                 ),
                                 ft.Container(
-                                    padding=ft.Padding.symmetric(horizontal=20, vertical=16), border=ft.border.only(top=ft.border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
+                                    padding=ft.Padding.symmetric(horizontal=20, vertical=16), border=ft.Border.only(top=ft.Border.BorderSide(1, ft.Colors.OUTLINE_VARIANT)),
                                     content=ft.Row(
                                         [
                                             ft.OutlinedButton("Retry Assessment", icon=ft.Icons.REPLAY_ROUNDED, on_click=close_and_retry) if not passed else ft.Container(),
@@ -1474,7 +1474,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             padding=ft.Padding.symmetric(horizontal=20, vertical=18),
             border_radius=HEADER_RADIUS,
             bgcolor=ft.Colors.SURFACE,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY)),
             content=ft.Column(
                 [
                     ft.Row(
@@ -1518,7 +1518,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 action_footer_controls.append(ft.Row([action_button], spacing=0))
 
         action_footer_container.content = ft.Container(
-            padding=ft.Padding.only(top=16), border=ft.border.only(top=ft.border.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
+            padding=ft.Padding.only(top=16), border=ft.Border.only(top=ft.Border.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
             content=ft.Column(action_footer_controls, spacing=10, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         )
 

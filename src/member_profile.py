@@ -94,7 +94,7 @@ async def member_profile_view(page: ft.Page, identifier: str):
                     ft.Container(
                         padding=ft.Padding.symmetric(horizontal=14, vertical=5),
                         bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
-                        border_radius=20, border=ft.border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.WHITE)),
+                        border_radius=20, border=ft.Border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.WHITE)),
                         content=ft.Text(role.title(), size=11, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE)
                     )
                 ]
@@ -164,7 +164,7 @@ async def member_profile_view(page: ft.Page, identifier: str):
 
         info_card = ft.Container(
             bgcolor=CARD_BG,
-            border_radius=16, border=ft.border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
+            border_radius=16, border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
             shadow=ft.BoxShadow(blur_radius=12, color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK), offset=ft.Offset(0, 2)),
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
             content=ft.Column(row_controls, spacing=0, tight=True)

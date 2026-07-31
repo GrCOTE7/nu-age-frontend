@@ -317,7 +317,7 @@ async def course_details_view(page: ft.Page, course_id: str, course_name: str):
                     width=float("inf"),
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=14,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border.all(1, ft.Colors.GREY_200),
                     padding=ft.Padding.symmetric(horizontal=18, vertical=16),
                     shadow=ft.BoxShadow(
                         blur_radius=6,

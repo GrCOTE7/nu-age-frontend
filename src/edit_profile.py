@@ -188,7 +188,7 @@ async def edit_profile_view(page: ft.Page) -> ft.View:
         height=90,
         border_radius=45,
         bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.ON_PRIMARY),
-        border=ft.border.all(3, ft.Colors.with_opacity(0.30, ft.Colors.ON_PRIMARY)),
+        border=ft.Border.all(3, ft.Colors.with_opacity(0.30, ft.Colors.ON_PRIMARY)),
         alignment=ft.Alignment(0, 0),
         content=ft.Text(
             initials,

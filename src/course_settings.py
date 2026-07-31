@@ -167,7 +167,7 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
             bgcolor=ft.Colors.SURFACE,
             border_radius=15,
             padding=20,
-            border=ft.border.all(1, border_color),
+            border=ft.Border.all(1, border_color),
             content=ft.Column(
                 spacing=15,
                 controls=[

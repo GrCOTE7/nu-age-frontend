@@ -270,7 +270,7 @@ async def main(page: ft.Page):
             margin=ft.Margin.only(top=14),
             border_radius=ft.BorderRadius(top_left=15,top_right=15, bottom_left=None, bottom_right=None),
             padding=ft.Padding.symmetric(horizontal=4, vertical=6),
-            border=ft.border.only(top=ft.BorderSide(1, ft.Colors.OUTLINE)),
+            border=ft.Border.only(top=ft.BorderSide(1, ft.Colors.OUTLINE)),
             animate_opacity=ft.Animation(500, ft.AnimationCurve.EASE_IN_OUT),
                         opacity=0.35
         )

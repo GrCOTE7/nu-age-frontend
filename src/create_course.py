@@ -138,7 +138,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
             col={"xs": 12, "sm": 6, "md": 4, "lg": 3},
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.GREY_200),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             shadow=ft.BoxShadow(
                 blur_radius=8,
@@ -341,7 +341,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
         image_picker_container = ft.Container(
             width=float("inf"),
             padding=ft.Padding.symmetric(vertical=18),
-            border=ft.border.all(1, ft.Colors.GREY_300),
+            border=ft.Border.all(1, ft.Colors.GREY_300),
             border_radius=10,
             ink=True,
             on_click=handle_logo_pick,

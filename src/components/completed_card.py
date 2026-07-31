@@ -121,7 +121,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
     stats_btn = ft.Container(
         height=34,
         border_radius=8,
-        border=ft.border.all(1.5, ft.Colors.PRIMARY),
+        border=ft.Border.all(1.5, ft.Colors.PRIMARY),
         alignment=ft.Alignment(0, 0),
         on_click=lambda e: on_stats_click(course_id),
         content=ft.Row(
@@ -167,7 +167,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
         border_radius=14,
         scale=1.0,
         animate_scale=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
-        border=ft.border.all(1, BORDER_COLOR),
+        border=ft.Border.all(1, BORDER_COLOR),
         shadow=ft.BoxShadow(
             blur_radius=8,
             spread_radius=0,

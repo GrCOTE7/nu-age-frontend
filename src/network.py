@@ -295,7 +295,7 @@ async def network_view(page: ft.Page):
             col={"xs": 6, "sm": 4, "md": 3},
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.GREY_200),
             shadow=ft.BoxShadow(
                 blur_radius=12,
                 color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
@@ -319,7 +319,7 @@ async def network_view(page: ft.Page):
                     ft.Container(
                         content=ft.Container(
                             content=_avatar(user, radius=26),
-                            border=ft.border.all(3, ft.Colors.ON_PRIMARY),
+                            border=ft.Border.all(3, ft.Colors.ON_PRIMARY),
                             border_radius=32,
                         ),
                         margin=ft.Margin.only(top=-30),
@@ -550,7 +550,7 @@ async def network_view(page: ft.Page):
     ref=card,
     bgcolor=ft.Colors.SURFACE,
     border_radius=16,
-    border=ft.border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)),
+    border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)),
     padding=ft.Padding.all(0),
     shadow=ft.BoxShadow(
         blur_radius=16,
@@ -564,7 +564,7 @@ async def network_view(page: ft.Page):
             # Primary gradient top bar
             ft.Container(
                 height=3,
-                border_radius=ft.border_radius.only(top_left=16, top_right=16),
+                border_radius=ft.BorderRadius.only(top_left=16, top_right=16),
                 gradient=ft.LinearGradient(
                     begin=ft.Alignment(-1, 0),
                     end=ft.Alignment(1, 0),
@@ -713,7 +713,7 @@ async def network_view(page: ft.Page):
     ref=row,
     bgcolor=ft.Colors.SURFACE,
     border_radius=14,
-    border=ft.border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.PRIMARY)),
+    border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.PRIMARY)),
     padding=ft.Padding.all(0),
     shadow=ft.BoxShadow(
         blur_radius=10,
@@ -727,7 +727,7 @@ async def network_view(page: ft.Page):
             # 1. The Top Gradient Border
             ft.Container(
                 height=2,
-                border_radius=ft.border_radius.only(top_left=14, top_right=14),
+                border_radius=ft.BorderRadius.only(top_left=14, top_right=14),
                 gradient=ft.LinearGradient(
                     begin=ft.Alignment(-1, 0),
                     end=ft.Alignment(1, 0),
@@ -790,7 +790,7 @@ async def network_view(page: ft.Page):
                                 ft.Container(
                                     border_radius=8,
                                     height=30,
-                                    border=ft.border.all(1, ft.Colors.GREY_300),
+                                    border=ft.Border.all(1, ft.Colors.GREY_300),
                                     padding=ft.Padding.symmetric(horizontal=10, vertical=0),
                                     content=ft.TextButton(
                                         ref=btn_ref,
@@ -922,7 +922,7 @@ async def network_view(page: ft.Page):
     width=160,
     bgcolor=ft.Colors.SURFACE,
     border_radius=14,
-    border=ft.border.all(1, ft.Colors.GREY_200),
+    border=ft.Border.all(1, ft.Colors.GREY_200),
     shadow=ft.BoxShadow(
         blur_radius=12,
         color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
@@ -946,7 +946,7 @@ async def network_view(page: ft.Page):
             ft.Container(
                 content=ft.Container(
                     content=_avatar(user, radius=26),
-                    border=ft.border.all(3, ft.Colors.SURFACE),
+                    border=ft.Border.all(3, ft.Colors.SURFACE),
                     border_radius=30,
                 ),
                 margin=ft.Margin.only(top=-26),

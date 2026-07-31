@@ -266,7 +266,7 @@ async def organisations_view(page: ft.Page):
                 bgcolor=ft.Colors.SURFACE,
                 padding=18,
                 border_radius=14,
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                border=ft.Border.all(1, ft.Colors.GREY_200),
                 shadow=ft.BoxShadow(blur_radius=6, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK), offset=ft.Offset(0, 2)),
                 content=ft.Column(
                     controls=[
@@ -296,7 +296,7 @@ async def organisations_view(page: ft.Page):
             margin=ft.Margin.symmetric(horizontal=16, vertical=10),
             bgcolor=ft.Colors.SURFACE,
             border_radius=16,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.GREY_200),
             shadow=ft.BoxShadow(blur_radius=10, color=ft.Colors.with_opacity(0.07, ft.Colors.BLACK), offset=ft.Offset(0, 3)),
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
             content=ft.Column(
@@ -467,7 +467,7 @@ async def organisations_view(page: ft.Page):
             selected_theme_color = e.control.data
             for swatch in color_swatches_row.controls:
                 swatch.border = (
-                    ft.border.all(3, ft.Colors.ON_SURFACE)
+                    ft.Border.all(3, ft.Colors.ON_SURFACE)
                     if swatch.data == selected_theme_color
                     else None
                 )
@@ -481,7 +481,7 @@ async def organisations_view(page: ft.Page):
                     width=32, height=32, border_radius=16,
                     bgcolor=color, data=color, ink=True,
                     on_click=handle_color_select,
-                    border=ft.border.all(3, ft.Colors.ON_SURFACE) if color == selected_theme_color else None,
+                    border=ft.Border.all(3, ft.Colors.ON_SURFACE) if color == selected_theme_color else None,
                 )
                 for color in curated_themes
             ],
@@ -651,7 +651,7 @@ async def organisations_view(page: ft.Page):
                                 ft.Container(
                                     width=float("inf"),
                                     padding=ft.Padding.symmetric(vertical=18, horizontal=12),
-                                    border=ft.border.all(1, ft.Colors.GREY_300),
+                                    border=ft.Border.all(1, ft.Colors.GREY_300),
                                     border_radius=10,
                                     ink=True,
                                     on_click=handle_logo_pick,
@@ -666,7 +666,7 @@ async def organisations_view(page: ft.Page):
                                 ft.Container(
                                     width=float("inf"),
                                     padding=ft.Padding.symmetric(vertical=14, horizontal=12),
-                                    border=ft.border.all(1, ft.Colors.GREY_300),
+                                    border=ft.Border.all(1, ft.Colors.GREY_300),
                                     border_radius=10,
                                     content=ft.Column(
                                         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -887,7 +887,7 @@ async def organisations_view(page: ft.Page):
                 return ft.Container(
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=12,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border.all(1, ft.Colors.GREY_200),
                     shadow=ft.BoxShadow(
                         blur_radius=6,
                         color=ft.Colors.with_opacity(0.07, ft.Colors.BLACK),
@@ -1089,7 +1089,7 @@ async def organisations_view(page: ft.Page):
             return ft.Container(
                 bgcolor=ft.Colors.SURFACE,
                 border_radius=14,
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                border=ft.Border.all(1, ft.Colors.GREY_200),
                 shadow=ft.BoxShadow(
                     blur_radius=8,
                     color=ft.Colors.with_opacity(0.07, ft.Colors.BLACK),
@@ -1323,7 +1323,7 @@ async def organisations_view(page: ft.Page):
                                 width=46, height=46,
                                 border_radius=23,
                                 bgcolor=ft.Colors.with_opacity(0.22, ft.Colors.WHITE),
-                                border=ft.border.all(2, ft.Colors.with_opacity(0.5, ft.Colors.WHITE)),
+                                border=ft.Border.all(2, ft.Colors.with_opacity(0.5, ft.Colors.WHITE)),
                                 alignment=ft.Alignment.CENTER,
                                 content=ft.Text(
                                     initials,
@@ -1356,7 +1356,7 @@ async def organisations_view(page: ft.Page):
                         padding=ft.Padding.symmetric(horizontal=12, vertical=6),
                         bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
                         border_radius=20,
-                        border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.WHITE)),
+                        border=ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.WHITE)),
                         content=ft.Row(
                             tight=True,
                             spacing=5,

@@ -184,7 +184,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                 row = ft.Container(
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=12,
-                    border=ft.border.all(1, ft.Colors.GREY_100),
+                    border=ft.Border.all(1, ft.Colors.GREY_100),
                     padding=ft.Padding.symmetric(horizontal=14, vertical=10),
                     shadow=ft.BoxShadow(
                         blur_radius=4,
@@ -389,7 +389,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                     margin=ft.Margin.symmetric(horizontal=16),
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=14,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border.all(1, ft.Colors.GREY_200),
                     shadow=ft.BoxShadow(
                         blur_radius=8,
                         color=ft.Colors.with_opacity(
@@ -458,7 +458,7 @@ async def invite_members_view(page: ft.Page, org_id: str):
                     margin=ft.Margin.symmetric(horizontal=16),
                     bgcolor=ft.Colors.SURFACE,
                     border_radius=14,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border.all(1, ft.Colors.GREY_200),
                     shadow=ft.BoxShadow(
                         blur_radius=6,
                         color=ft.Colors.with_opacity(

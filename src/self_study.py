@@ -42,7 +42,7 @@ def _card(content, padding=16) -> ft.Container:
     return ft.Container(
         bgcolor=ft.Colors.SURFACE,
         border_radius=14,
-        border=ft.border.all(1, ft.Colors.GREY_200),
+        border=ft.Border.all(1, ft.Colors.GREY_200),
         width=float('inf'),
         padding=padding,
         shadow=ft.BoxShadow(
@@ -245,7 +245,7 @@ async def self_study_view(page: ft.Page):
     # Extract the upgrade banner so we can toggle it dynamically
     sidebar_upgrade_banner = ft.Container(
         visible=False, width=float("inf"), border_radius=10,
-        border=ft.border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.ORANGE_400)),
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.3, ft.Colors.ORANGE_400)),
         bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ORANGE_400),
         padding=ft.Padding.symmetric(horizontal=12, vertical=10),
         content=ft.Column(
@@ -320,7 +320,7 @@ async def self_study_view(page: ft.Page):
             chip = ft.Container(
                 height=40,
                 border_radius=8,
-                border=ft.border.all(
+                border=ft.Border.all(
                     1.5,
                     ft.Colors.PRIMARY if is_selected else ft.Colors.ON_PRIMARY
                 ),
@@ -407,7 +407,7 @@ async def self_study_view(page: ft.Page):
         return ft.Container(
             border_radius=12,
             padding=ft.Padding.only(left=14, right=10, top=10, bottom=10),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.ON_PRIMARY)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.12, ft.Colors.ON_PRIMARY)),
             gradient=ft.LinearGradient(
                 begin=ft.Alignment.CENTER_LEFT,
                 end=ft.Alignment.CENTER_RIGHT,
@@ -449,7 +449,7 @@ async def self_study_view(page: ft.Page):
     sidebar_container = ft.Container(
         width=330,
         bgcolor=ft.Colors.SURFACE,
-        border=ft.border.only(right=ft.BorderSide(1, ft.Colors.GREY_200)),
+        border=ft.Border.only(right=ft.BorderSide(1, ft.Colors.GREY_200)),
         shadow=ft.BoxShadow(
             blur_radius=12,
             color=ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE),
@@ -776,7 +776,7 @@ async def self_study_view(page: ft.Page):
         padding=ft.Padding.symmetric(horizontal=12, vertical=10),
         bgcolor=ft.Colors.GREEN_50,
         border_radius=10,
-        border=ft.border.all(1, ft.Colors.GREEN_200),
+        border=ft.Border.all(1, ft.Colors.GREEN_200),
         content=ft.Row(
             spacing=8,
             controls=[gen_status_icon, gen_status_text]
@@ -853,14 +853,14 @@ async def self_study_view(page: ft.Page):
                 # --- UPDATE THE UI ---
                 if is_generating_anything:
                     generation_banner.bgcolor = ft.Colors.BLUE_50
-                    generation_banner.border = ft.border.all(1, ft.Colors.BLUE_200)
+                    generation_banner.border = ft.Border.all(1, ft.Colors.BLUE_200)
                     gen_status_icon.name = ft.Icons.AUTORENEW_ROUNDED
                     gen_status_icon.color = ft.Colors.BLUE_600
                     gen_status_text.value = "Status: Generating..."
                     gen_status_text.color = ft.Colors.BLUE_700
                 else:
                     generation_banner.bgcolor = ft.Colors.GREEN_50
-                    generation_banner.border = ft.border.all(1, ft.Colors.GREEN_200)
+                    generation_banner.border = ft.Border.all(1, ft.Colors.GREEN_200)
                     gen_status_icon.name = ft.Icons.CHECK_CIRCLE_ROUNDED
                     gen_status_icon.color = ft.Colors.GREEN_600
                     gen_status_text.value = "Status: All good!"
@@ -936,7 +936,7 @@ async def self_study_view(page: ft.Page):
                 col={"xs": 12, "sm": 4},
                 bgcolor=ft.Colors.SURFACE,
                 border_radius=14,
-                border=ft.border.all(1, ft.Colors.GREY_200),
+                border=ft.Border.all(1, ft.Colors.GREY_200),
                 padding=16,
                 ink=True,
                 on_click=lambda _: on_tap(),
@@ -975,7 +975,7 @@ async def self_study_view(page: ft.Page):
             visible=sel_count > 0,
             border_radius=8,
             bgcolor=ft.Colors.with_opacity(0.07, ft.Colors.PRIMARY),
-            border=ft.border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PRIMARY)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.2, ft.Colors.PRIMARY)),
             padding=ft.Padding.symmetric(horizontal=12, vertical=8),
             content=ft.Row(
                 spacing=8,
@@ -1241,7 +1241,7 @@ async def self_study_view(page: ft.Page):
                         ft.Container(
                             border_radius=10,
                             width=float("inf"),
-                            border=ft.border.all(1, ft.Colors.GREY_300),
+                            border=ft.Border.all(1, ft.Colors.GREY_300),
                             padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                             ink=True,
                             on_click=pick_file,
@@ -1511,7 +1511,7 @@ async def self_study_view(page: ft.Page):
         card_face      = ft.Container(
             expand=True,
             border_radius=16,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.GREY_200),
             padding=ft.Padding.symmetric(horizontal=24, vertical=32),
             shadow=ft.BoxShadow(blur_radius=12,
                                 color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
@@ -1736,7 +1736,7 @@ async def self_study_view(page: ft.Page):
             for idx, opt in enumerate(q["options"]):
                 btn = ft.Container(
                     border_radius=10,
-                    border=ft.border.all(1, ft.Colors.GREY_200),
+                    border=ft.Border.all(1, ft.Colors.GREY_200),
                     bgcolor=ft.Colors.SURFACE,
                     padding=ft.Padding.symmetric(horizontal=14, vertical=12),
                     ink=True,
@@ -1753,7 +1753,7 @@ async def self_study_view(page: ft.Page):
                     if right:
                         state_q["score"] += 1
                         feedback_box.bgcolor = ft.Colors.GREEN_50
-                        feedback_box.border  = ft.border.all(1, ft.Colors.GREEN_300)
+                        feedback_box.border  = ft.Border.all(1, ft.Colors.GREEN_300)
                         feedback_box.content = ft.Column(
                             spacing=4,
                             controls=[
@@ -1766,7 +1766,7 @@ async def self_study_view(page: ft.Page):
                         )
                     else:
                         feedback_box.bgcolor = ft.Colors.RED_50
-                        feedback_box.border  = ft.border.all(1, ft.Colors.RED_200)
+                        feedback_box.border  = ft.Border.all(1, ft.Colors.RED_200)
                         feedback_box.content = ft.Column(
                             spacing=4,
                             controls=[
@@ -1845,7 +1845,7 @@ async def self_study_view(page: ft.Page):
                                             width=100, height=100,
                                             bgcolor=ft.Colors.with_opacity(0.08, color),
                                             border_radius=50,
-                                            border=ft.border.all(4, color),
+                                            border=ft.Border.all(4, color),
                                             alignment=ft.Alignment.CENTER,
                                             content=ft.Column(
                                                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -2080,7 +2080,7 @@ async def self_study_view(page: ft.Page):
                 selected = state_ex["answers"][i] == idx
                 btn = ft.Container(
                     border_radius=10,
-                    border=ft.border.all(
+                    border=ft.Border.all(
                         1.5,
                         ft.Colors.PRIMARY if selected else ft.Colors.GREY_200
                     ),
@@ -2096,7 +2096,7 @@ async def self_study_view(page: ft.Page):
                                 width=22, height=22, border_radius=11,
                                 bgcolor=(ft.Colors.PRIMARY if selected
                                          else ft.Colors.GREY_100),
-                                border=ft.border.all(
+                                border=ft.Border.all(
                                     1.5,
                                     ft.Colors.PRIMARY if selected
                                     else ft.Colors.GREY_300
@@ -2177,7 +2177,7 @@ async def self_study_view(page: ft.Page):
 
         exam_header = ft.Container(
             bgcolor=ft.Colors.SURFACE,
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+            border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
             padding=ft.Padding.symmetric(horizontal=16, vertical=10),
             content=ft.Row(
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -2261,7 +2261,7 @@ async def self_study_view(page: ft.Page):
                 right   = ua == correct
                 breakdown.append(ft.Container(
                     border_radius=10,
-                    border=ft.border.all(1, ft.Colors.GREEN_300 if right
+                    border=ft.Border.all(1, ft.Colors.GREEN_300 if right
                                          else ft.Colors.RED_200),
                     bgcolor=ft.Colors.GREEN_50 if right else ft.Colors.RED_50,
                     padding=ft.Padding.symmetric(horizontal=14, vertical=10),

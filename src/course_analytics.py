@@ -104,7 +104,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
             col=col or {"xs": 6, "sm": 4},
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.GREY_200),
             padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             shadow=ft.BoxShadow(
                 blur_radius=8,
@@ -146,7 +146,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
             col=col or {"xs": 12, "sm": 6},
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.GREY_200),
             padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             content=ft.Row(
                 spacing=12,
@@ -183,7 +183,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
     def activity_panel(data: list):
         if not data:
             return ft.Container(
-                bgcolor=ft.Colors.SURFACE, border_radius=14, border=ft.border.all(1, ft.Colors.GREY_200),
+                bgcolor=ft.Colors.SURFACE, border_radius=14, border=ft.Border.all(1, ft.Colors.GREY_200),
                 padding=14, content=ft.Text("No activity data available yet.", size=12, color=ft.Colors.GREY_500)
             )
 
@@ -219,7 +219,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
         return ft.Container(
             bgcolor=ft.Colors.SURFACE,
             border_radius=14,
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.GREY_200),
             padding=ft.Padding.all(14),
             content=ft.Column(
                 spacing=10,
@@ -278,7 +278,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
         return ft.Container(
             bgcolor=ft.Colors.GREY_50 if is_even else ft.Colors.SURFACE,
             padding=ft.Padding.symmetric(horizontal=12, vertical=10),
-            border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
+            border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_100)),
             content=ft.Row(
                 spacing=10,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -377,7 +377,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                     ft.Container(
                         bgcolor=ft.Colors.SURFACE,
                         padding=ft.Padding.symmetric(horizontal=12, vertical=8),
-                        border=ft.border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
+                        border=ft.Border.only(bottom=ft.BorderSide(1, ft.Colors.GREY_200)),
                         content=ft.Row(
                             controls=[
                                 ft.Text("Student", size=10, weight=ft.FontWeight.W_700,
@@ -521,7 +521,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
                             ft.Container(
                                 bgcolor=ft.Colors.SURFACE,
                                 border_radius=14,
-                                border=ft.border.all(1, ft.Colors.GREY_200),
+                                border=ft.Border.all(1, ft.Colors.GREY_200),
                                 clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
                                 content=student_table,
                             ),

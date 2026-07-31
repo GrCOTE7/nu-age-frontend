@@ -50,7 +50,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
         return ft.Container(
             bgcolor=SURFACE,
             border_radius=14,
-            border=ft.border.all(1, GREY_200),
+            border=ft.Border.all(1, GREY_200),
             padding=ft.Padding.all(16),
             shadow=ft.BoxShadow(
                 blur_radius=8,
@@ -143,7 +143,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
                 end=ft.Alignment(1, 1),
                 colors=["#6B5EE4", "#818CF8", "#A78BFA"],
             ),
-             border_radius=ft.border_radius.only(
+             border_radius=ft.BorderRadius.only(
                 bottom_left=30, 
                 bottom_right=30
             ),
@@ -228,7 +228,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
         pct_section = ft.Container(
             bgcolor=SURFACE,
             border_radius=14,
-            border=ft.border.all(1, GREY_200),
+            border=ft.Border.all(1, GREY_200),
             padding=ft.Padding.all(16),
             shadow=ft.BoxShadow(
                 blur_radius=8,
@@ -293,7 +293,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
             cert_section = ft.Container(
                 bgcolor=GOLD_BG,
                 border_radius=14,
-                border=ft.border.all(1, ft.Colors.with_opacity(0.2, GOLD)),
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.2, GOLD)),
                 padding=ft.Padding.all(16),
                 content=ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,

@@ -145,7 +145,7 @@ async def profile_view(page: ft.Page):
                     padding=ft.Padding.symmetric(horizontal=14, vertical=5),
                     bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.ON_PRIMARY),
                     border_radius=20,
-                    border=ft.border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.ON_PRIMARY)),
+                    border=ft.Border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.ON_PRIMARY)),
                     content=ft.Text(
                         role.title(),
                         size=11,
@@ -271,7 +271,7 @@ Pro tip: share it with a friend and you unlock extra study hub generations, it's
         padding=ft.Padding.symmetric(horizontal=16, vertical=12),
         bgcolor=ft.Colors.TERTIARY,
         border_radius=12,
-        border=ft.border.all(1, ft.Colors.GREEN_200),
+        border=ft.Border.all(1, ft.Colors.GREEN_200),
     )
 )
 
@@ -279,7 +279,7 @@ Pro tip: share it with a friend and you unlock extra study hub generations, it's
     info_card = ft.Container(
         bgcolor=CARD_BG,
         border_radius=16,
-        border=ft.border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
         shadow=ft.BoxShadow(
             blur_radius=12,
             color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -307,7 +307,7 @@ Pro tip: share it with a friend and you unlock extra study hub generations, it's
             expand=True,
             bgcolor=CARD_BG,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
             shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK), offset=ft.Offset(0, 2)),
             ink=True,
             on_click=on_click,

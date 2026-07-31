@@ -62,7 +62,7 @@ async def chat_view(page: ft.Page) -> ft.View:
     # ==========================================
     chat_list_panel   = ft.Container(
         expand=1,
-        border=ft.border.only(right=ft.BorderSide(1, DIVIDER_COLOR)),
+        border=ft.Border.only(right=ft.BorderSide(1, DIVIDER_COLOR)),
         bgcolor=LIST_BG
     )
     active_chat_panel = ft.Container(expand=2, bgcolor=CHAT_WALL_BG)
@@ -225,7 +225,7 @@ async def chat_view(page: ft.Page) -> ft.View:
             status_dot = ft.Container(
                 width=dot_size, height=dot_size,
                 bgcolor=ONLINE_DOT if is_online else ft.Colors.GREY_400,
-                border=ft.border.all(2, ft.Colors.PRIMARY),
+                border=ft.Border.all(2, ft.Colors.PRIMARY),
                 shape=ft.BoxShape.CIRCLE
             )
             return ft.Stack(
@@ -750,13 +750,13 @@ async def chat_view(page: ft.Page) -> ft.View:
                 ft.Container(
                     bgcolor=INPUT_BAR_BG,
                     padding=ft.Padding(left=8, right=8, top=8, bottom=8),
-                    border=ft.border.only(top=ft.BorderSide(1, DIVIDER_COLOR)),
+                    border=ft.Border.only(top=ft.BorderSide(1, DIVIDER_COLOR)),
                     content=ft.Row([
                         ft.Container(
                             expand=True,
                             bgcolor=ft.Colors.ON_PRIMARY,
                             border_radius=24,
-                            border=ft.border.all(1, DIVIDER_COLOR),
+                            border=ft.Border.all(1, DIVIDER_COLOR),
                             padding=ft.Padding(left=4, right=4, top=2, bottom=2),
                             content=msg_input
                         ),
@@ -1136,7 +1136,7 @@ async def chat_view(page: ft.Page) -> ft.View:
         users_container = ft.Container(
             content=users_listview,
             height=260,
-            border=ft.border.all(1, DIVIDER_COLOR),
+            border=ft.Border.all(1, DIVIDER_COLOR),
             border_radius=10,
             clip_behavior=ft.ClipBehavior.HARD_EDGE
         )
@@ -1170,7 +1170,7 @@ async def chat_view(page: ft.Page) -> ft.View:
                     )
                     row = ft.Container(
                         padding=ft.Padding(left=12, right=12, top=10, bottom=10),
-                        border=ft.border.only(bottom=ft.BorderSide(1, DIVIDER_COLOR)),
+                        border=ft.Border.only(bottom=ft.BorderSide(1, DIVIDER_COLOR)),
                         ink=True, on_click=toggle_row,
                         content=ft.Row([avatar, ft.Container(width=10),
                                         ft.Text(display_name, expand=True, size=14, weight=ft.FontWeight.W_500),
@@ -1254,7 +1254,7 @@ async def chat_view(page: ft.Page) -> ft.View:
         users_listview  = ft.ListView(expand=True, spacing=0)
         users_container = ft.Container(
             content=users_listview, height=200,
-            border=ft.border.all(1, DIVIDER_COLOR),
+            border=ft.Border.all(1, DIVIDER_COLOR),
             border_radius=10,
             clip_behavior=ft.ClipBehavior.HARD_EDGE
         )
@@ -1286,7 +1286,7 @@ async def chat_view(page: ft.Page) -> ft.View:
                         )
                         row = ft.Container(
                             padding=ft.Padding(left=12, right=12, top=10, bottom=10),
-                            border=ft.border.only(bottom=ft.BorderSide(1, DIVIDER_COLOR)),
+                            border=ft.Border.only(bottom=ft.BorderSide(1, DIVIDER_COLOR)),
                             ink=True, on_click=toggle_row,
                             content=ft.Row([avatar, ft.Container(width=10),
                                             ft.Text(display_name, expand=True, size=14, weight=ft.FontWeight.W_500),

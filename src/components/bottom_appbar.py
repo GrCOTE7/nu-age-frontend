@@ -65,7 +65,7 @@ def get_bottom_appbar(page: ft.Page):
         padding=0, 
         # THE FIX: Increased height from 63 to 75 to comfortably fit the text
         height=75, 
-        border_radius=ft.border_radius.only(top_left=10, top_right=10),
+        border_radius=ft.BorderRadius.only(top_left=10, top_right=10),
         shadow_color=ft.Colors.BLACK26,
         content=ft.Container(
             height=75, 

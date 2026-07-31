@@ -5,12 +5,12 @@ from src.requests.auth import get_member_profile
 async def member_profile_view(page: ft.Page, identifier: str):
 
     # ── Palette ───────────────────────────────────────────────────────────────
-    PAGE_BG       = "#F4F6FA"
-    CARD_BG       = ft.Colors.WHITE
-    LABEL_COLOR   = "#9CA3AF"   # muted grey
-    VALUE_COLOR   = "#111827"   # near-black
-    DIVIDER_CLR   = "#F3F4F6"
-    ICON_BG       = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
+    PAGE_BG       = ft.Colors.ON_PRIMARY    # Adapts to your dark/light background
+    CARD_BG       = ft.Colors.SURFACE         # Pulls #FAFAFA in Light, #121212 in Dark
+    LABEL_COLOR   = ft.Colors.ON_SURFACE_VARIANT # Native muted text color
+    VALUE_COLOR   = ft.Colors.ON_SURFACE        # Pulls #1A1A1A in Light, #E8E8E8 in Dark
+    DIVIDER_CLR   = ft.Colors.OUTLINE_VARIANT   # Native subtle divider color
+    ICON_BG       = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY) # Keep this! PRIMARY is already adaptive.
 
     # ── Initial Loading Socket ────────────────────────────────────────────────
     content_socket = ft.Container(
@@ -18,7 +18,10 @@ async def member_profile_view(page: ft.Page, identifier: str):
         alignment=ft.Alignment.CENTER,
         content=ft.ProgressRing(color=ft.Colors.PRIMARY, stroke_width=3)
     )
-
+    def _go_back(e):
+            if len(page.views) > 1:
+                page.views.pop()
+                page.update()
     # ── Async Data Fetcher & Renderer ─────────────────────────────────────────
     async def load_profile():
         token = await page.shared_preferences.get("auth_token")
@@ -36,7 +39,6 @@ async def member_profile_view(page: ft.Page, identifier: str):
             return
 
         # Safe extraction
-        print(user_data)
         first_name = user_data.get("first_name", "")
         last_name  = user_data.get("last_name", "")
         full_name  = f"{first_name} {last_name}".strip() or "Unknown Learner"
@@ -90,15 +92,15 @@ async def member_profile_view(page: ft.Page, identifier: str):
                     ft.Text(full_name, size=20, weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
                     # Role pill
                     ft.Container(
-                        padding=ft.padding.symmetric(horizontal=14, vertical=5),
+                        padding=ft.Padding.symmetric(horizontal=14, vertical=5),
                         bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
-                        border_radius=20, border=ft.border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.WHITE)),
+                        border_radius=20, border=ft.Border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.WHITE)),
                         content=ft.Text(role.title(), size=11, weight=ft.FontWeight.W_600, color=ft.Colors.WHITE)
                     )
                 ]
             )
         )
-
+        
         # Back Button Overlay
         header_stack = ft.Stack([
             header,
@@ -108,7 +110,7 @@ async def member_profile_view(page: ft.Page, identifier: str):
                     icon_color=ft.Colors.WHITE,
                     icon_size=20,
                     tooltip="Go back",
-                    on_click=lambda _: page.go("/network"), # Route back to wherever they came from
+                    on_click=lambda _: page.go("/dashboard"), # Route back to wherever they came from
                     style=ft.ButtonStyle(
                         bgcolor={"": ft.Colors.with_opacity(0.18, ft.Colors.WHITE)},
                         shape=ft.CircleBorder()
@@ -162,7 +164,7 @@ async def member_profile_view(page: ft.Page, identifier: str):
 
         info_card = ft.Container(
             bgcolor=CARD_BG,
-            border_radius=16, border=ft.border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
+            border_radius=16, border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
             shadow=ft.BoxShadow(blur_radius=12, color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK), offset=ft.Offset(0, 2)),
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
             content=ft.Column(row_controls, spacing=0, tight=True)
@@ -198,9 +200,7 @@ async def member_profile_view(page: ft.Page, identifier: str):
         padding=0,
         bottom_appbar=get_bottom_appbar(page),
         controls=[
-            ft.SafeArea(
-                expand=True,
-                content=content_socket
-            )
+                content_socket
+            
         ]
     )

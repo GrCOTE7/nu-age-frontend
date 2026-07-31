@@ -3,10 +3,10 @@ import flet as ft
 def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
 
     # ── Palette (uses your PRIMARY throughout) ────────────────────────────────
-    CARD_BG      = ft.Colors.WHITE
-    BORDER_COLOR = ft.Colors.with_opacity(0.09, ft.Colors.BLACK)
+    CARD_BG      = ft.Colors.ON_PRIMARY
+    BORDER_COLOR = ft.Colors.with_opacity(0.09, ft.Colors.ON_SURFACE)
     BADGE_BG     = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
-    TITLE_COLOR  = "#1A1D23"
+    TITLE_COLOR  = ft.Colors.ON_SURFACE
 
     # ── Hover animation ───────────────────────────────────────────────────────
     def on_hover(e):
@@ -16,7 +16,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
             blur_radius   = 22 if is_hovering else 8,
             spread_radius = 0,
             color         = ft.Colors.with_opacity(
-                0.14 if is_hovering else 0.07, ft.Colors.BLACK
+                0.14 if is_hovering else 0.07, ft.Colors.ON_SURFACE
             ),
             offset=ft.Offset(0, 8 if is_hovering else 2),
         )
@@ -47,7 +47,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
 
     # ── Completion badge (CHECK_CIRCLE — LMS industry standard) ───────────────
     completion_badge = ft.Container(
-        padding=ft.padding.symmetric(horizontal=9, vertical=4),
+        padding=ft.Padding.symmetric(horizontal=9, vertical=4),
         bgcolor=BADGE_BG,
         border_radius=20,
         content=ft.Row(
@@ -90,7 +90,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
     progress_bar = ft.ProgressBar(
         value=1.0,
         color=ft.Colors.PRIMARY,
-        bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.BLACK),
+        bgcolor=ft.Colors.with_opacity(0.10, ft.Colors.ON_SURFACE),
         height=5,
         border_radius=3,
     )
@@ -121,7 +121,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
     stats_btn = ft.Container(
         height=34,
         border_radius=8,
-        border=ft.border.all(1.5, ft.Colors.PRIMARY),
+        border=ft.Border.all(1.5, ft.Colors.PRIMARY),
         alignment=ft.Alignment(0, 0),
         on_click=lambda e: on_stats_click(course_id),
         content=ft.Row(
@@ -147,7 +147,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
 
     # ── Card body ─────────────────────────────────────────────────────────────
     card_body = ft.Container(
-        padding=ft.padding.only(left=14, right=14, top=12, bottom=14),
+        padding=ft.Padding.only(left=14, right=14, top=12, bottom=14),
         content=ft.Column(
             spacing=10,
             controls=[
@@ -167,11 +167,11 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
         border_radius=14,
         scale=1.0,
         animate_scale=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
-        border=ft.border.all(1, BORDER_COLOR),
+        border=ft.Border.all(1, BORDER_COLOR),
         shadow=ft.BoxShadow(
             blur_radius=8,
             spread_radius=0,
-            color=ft.Colors.with_opacity(0.07, ft.Colors.BLACK),
+            color=ft.Colors.with_opacity(0.07, ft.Colors.ON_SURFACE),
             offset=ft.Offset(0, 2),
         ),
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,

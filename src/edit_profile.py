@@ -53,7 +53,7 @@ async def edit_profile_view(page: ft.Page) -> ft.View:
     feedback = ft.Container(
         visible=False,
         border_radius=8,
-        padding=ft.padding.symmetric(horizontal=12, vertical=10),
+        padding=ft.Padding.symmetric(horizontal=12, vertical=10),
         content=ft.Row(
             spacing=8,
             controls=[
@@ -188,7 +188,7 @@ async def edit_profile_view(page: ft.Page) -> ft.View:
         height=90,
         border_radius=45,
         bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.ON_PRIMARY),
-        border=ft.border.all(3, ft.Colors.with_opacity(0.30, ft.Colors.ON_PRIMARY)),
+        border=ft.Border.all(3, ft.Colors.with_opacity(0.30, ft.Colors.ON_PRIMARY)),
         alignment=ft.Alignment(0, 0),
         content=ft.Text(
             initials,
@@ -234,7 +234,7 @@ async def edit_profile_view(page: ft.Page) -> ft.View:
     )
 
     form = ft.Container(
-        padding=ft.padding.all(24),
+        padding=ft.Padding.all(24),
         expand=True,
         content=ft.Column(
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH,

@@ -50,8 +50,8 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
         return ft.Container(
             bgcolor=SURFACE,
             border_radius=14,
-            border=ft.border.all(1, GREY_200),
-            padding=ft.padding.all(16),
+            border=ft.Border.all(1, GREY_200),
+            padding=ft.Padding.all(16),
             shadow=ft.BoxShadow(
                 blur_radius=8,
                 color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -93,7 +93,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
         return ft.Container(
             bgcolor=bg,
             border_radius=12,
-            padding=ft.padding.symmetric(horizontal=14, vertical=8),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=8),
             content=ft.Row(
                 tight=True, spacing=8,
                 controls=[
@@ -143,20 +143,20 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
                 end=ft.Alignment(1, 1),
                 colors=["#6B5EE4", "#818CF8", "#A78BFA"],
             ),
-             border_radius=ft.border_radius.only(
+             border_radius=ft.BorderRadius.only(
                 bottom_left=30, 
                 bottom_right=30
             ),
-            padding=ft.padding.only(left=20, right=20, top=24, bottom=28),
+            padding=ft.Padding.only(left=20, right=20, top=24, bottom=28),
             content=ft.Column(
                 spacing=6,
                 controls=[
-                    ft.Text("Course Completed", size=12, color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE),
+                    ft.Text("Course Completed", size=12, color=ft.Colors.with_opacity(0.75, ft.Colors.ON_PRIMARY),
                             weight=ft.FontWeight.W_500),
                     ft.Text(
                         s.get("course_title", "Course"),
                         size=20, weight=ft.FontWeight.W_700,
-                        color=ft.Colors.WHITE,
+                        color=ft.Colors.ON_PRIMARY,
                         max_lines=2, overflow=ft.TextOverflow.ELLIPSIS,
                     ),
                     ft.Container(height=4),
@@ -165,15 +165,15 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
                         controls=[
                             ft.Row(tight=True, spacing=5, controls=[
                                 ft.Icon(ft.Icons.CALENDAR_TODAY_ROUNDED,
-                                        size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.WHITE)),
+                                        size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_PRIMARY)),
                                 ft.Text(f"Enrolled {_fmt_date(s.get('enrolled_at'))}",
-                                        size=11, color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
+                                        size=11, color=ft.Colors.with_opacity(0.75, ft.Colors.ON_PRIMARY)),
                             ]),
                             ft.Row(tight=True, spacing=5, controls=[
                                 ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE_ROUNDED,
-                                        size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.WHITE)),
+                                        size=12, color=ft.Colors.with_opacity(0.7, ft.Colors.ON_PRIMARY)),
                                 ft.Text(f"Finished {_fmt_date(s.get('completed_at'))}",
-                                        size=11, color=ft.Colors.with_opacity(0.75, ft.Colors.WHITE)),
+                                        size=11, color=ft.Colors.with_opacity(0.75, ft.Colors.ON_PRIMARY)),
                             ]),
                         ],
                     ),
@@ -228,8 +228,8 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
         pct_section = ft.Container(
             bgcolor=SURFACE,
             border_radius=14,
-            border=ft.border.all(1, GREY_200),
-            padding=ft.padding.all(16),
+            border=ft.Border.all(1, GREY_200),
+            padding=ft.Padding.all(16),
             shadow=ft.BoxShadow(
                 blur_radius=8,
                 color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -293,8 +293,8 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
             cert_section = ft.Container(
                 bgcolor=GOLD_BG,
                 border_radius=14,
-                border=ft.border.all(1, ft.Colors.with_opacity(0.2, GOLD)),
-                padding=ft.padding.all(16),
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.2, GOLD)),
+                padding=ft.Padding.all(16),
                 content=ft.Row(
                     alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                     controls=[
@@ -337,7 +337,7 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
             controls=[
                 header,
                 ft.Container(
-                    padding=ft.padding.only(left=16, right=16, top=20, bottom=32),
+                    padding=ft.Padding.only(left=16, right=16, top=20, bottom=32),
                     content=ft.Column(
                         spacing=16,
                         controls=[
@@ -394,12 +394,12 @@ async def course_stats_view(page: ft.Page, course_id: str) -> ft.View:
         appbar=ft.AppBar(
             leading=ft.IconButton(
                 ft.Icons.ARROW_BACK_IOS_NEW_ROUNDED,
-                icon_color=ft.Colors.WHITE,
+                icon_color=ft.Colors.ON_PRIMARY,
                 icon_size=18,
                 on_click=lambda _: page.go(f'/courses'),
             ),
             title=ft.Text("My Results", size=16,
-                          weight=ft.FontWeight.W_600, color=ft.Colors.WHITE),
+                          weight=ft.FontWeight.W_600, color=ft.Colors.ON_PRIMARY),
             bgcolor=ft.Colors.PRIMARY,
             elevation=0,
             center_title=False,

@@ -1,4 +1,5 @@
 import flet as ft
+import urllib.parse
 from src.components.bottom_appbar import get_bottom_appbar
 
 
@@ -19,12 +20,12 @@ async def profile_view(page: ft.Page):
     initials = "".join([n[0] for n in full_name.split()[:2]]).upper() if full_name else "?"
 
     # ── Palette ───────────────────────────────────────────────────────────────
-    PAGE_BG       = "#F4F6FA"
-    CARD_BG       = ft.Colors.WHITE
-    LABEL_COLOR   = "#9CA3AF"   # muted grey
-    VALUE_COLOR   = "#111827"   # near-black
-    DIVIDER_CLR   = "#F3F4F6"
-    ICON_BG       = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
+    PAGE_BG       = ft.Colors.ON_PRIMARY    # Adapts to your dark/light background
+    CARD_BG       = ft.Colors.SURFACE         # Pulls #FAFAFA in Light, #121212 in Dark
+    LABEL_COLOR   = ft.Colors.ON_SURFACE_VARIANT # Native muted text color
+    VALUE_COLOR   = ft.Colors.ON_SURFACE        # Pulls #1A1A1A in Light, #E8E8E8 in Dark
+    DIVIDER_CLR   = ft.Colors.OUTLINE_VARIANT   # Native subtle divider color
+    ICON_BG       = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY) # Keep this! PRIMARY is already adaptive.
 
     # ── Logout logic ──────────────────────────────────────────────────────────
     async def execute_logout(e):
@@ -33,8 +34,26 @@ async def profile_view(page: ft.Page):
         page.update()
 
     async def handle_logout(e):
-        page.show_dialog(logout_confirmation_dialog)
-        page.update()
+            # 1. Defensively check if Flet already marked the dialog as open
+            if logout_confirmation_dialog.open:
+                return
+
+            # 2. Lock the trigger button instantly to absorb any rapid double-clicks
+            e.control.disabled = True
+            e.control.update()
+
+            try:
+                # 3. Safely open the dialog
+                page.show_dialog(logout_confirmation_dialog)
+                page.update()
+            finally:
+                # 4. Re-enable the button in the background so it works if they 
+                # cancel the dialog and change their mind!
+                e.control.disabled = False
+                try:
+                    e.control.update()
+                except Exception:
+                    pass
 
     logout_confirmation_dialog = ft.AlertDialog(
         modal=True,
@@ -58,7 +77,7 @@ async def profile_view(page: ft.Page):
                 content=ft.Text("Log out", weight=ft.FontWeight.W_600),
                 style=ft.ButtonStyle(
                     bgcolor=ft.Colors.RED_400,
-                    color=ft.Colors.WHITE,
+                    color=ft.Colors.ON_PRIMARY,
                     shape=ft.RoundedRectangleBorder(radius=8)
                 ),
                 on_click=execute_logout
@@ -94,7 +113,7 @@ async def profile_view(page: ft.Page):
                 ft.Container(
                     width=86, height=86,
                     border_radius=43,
-                    bgcolor=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.ON_PRIMARY,
                     alignment=ft.Alignment.CENTER,
                     shadow=ft.BoxShadow(
                         blur_radius=16,
@@ -104,7 +123,7 @@ async def profile_view(page: ft.Page):
                     content=ft.Container(
                         width=78, height=78,
                         border_radius=39,
-                        bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.WHITE),
+                        bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.ON_PRIMARY),
                         alignment=ft.Alignment.CENTER,
                         content=ft.Text(
                             initials,
@@ -119,19 +138,19 @@ async def profile_view(page: ft.Page):
                     full_name,
                     size=20,
                     weight=ft.FontWeight.BOLD,
-                    color=ft.Colors.WHITE
+                    color=ft.Colors.ON_PRIMARY
                 ),
                 # Role pill
                 ft.Container(
-                    padding=ft.padding.symmetric(horizontal=14, vertical=5),
-                    bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
+                    padding=ft.Padding.symmetric(horizontal=14, vertical=5),
+                    bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.ON_PRIMARY),
                     border_radius=20,
-                    border=ft.border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.WHITE)),
+                    border=ft.Border.all(1, ft.Colors.with_opacity(0.25, ft.Colors.ON_PRIMARY)),
                     content=ft.Text(
                         role.title(),
                         size=11,
                         weight=ft.FontWeight.W_600,
-                        color=ft.Colors.WHITE
+                        color=ft.Colors.ON_PRIMARY
                     )
                 )
             ]
@@ -145,12 +164,12 @@ async def profile_view(page: ft.Page):
         ft.Container(
             content=ft.IconButton(
                 icon=ft.Icons.LOGOUT_ROUNDED,
-                icon_color=ft.Colors.WHITE,
+                icon_color=ft.Colors.ON_PRIMARY,
                 icon_size=20,
                 tooltip="Log out",
                 on_click=handle_logout,
                 style=ft.ButtonStyle(
-                    bgcolor={"": ft.Colors.with_opacity(0.18, ft.Colors.WHITE)},
+                    bgcolor={"": ft.Colors.with_opacity(0.18, ft.Colors.ON_PRIMARY)},
                     shape=ft.CircleBorder()
                 )
             ),
@@ -160,12 +179,12 @@ async def profile_view(page: ft.Page):
         ft.Container(
             content=ft.IconButton(
                 icon=ft.Icons.EDIT_OUTLINED,
-                icon_color=ft.Colors.WHITE,
+                icon_color=ft.Colors.ON_PRIMARY,
                 icon_size=20,
                 tooltip="Edit profile",
                 on_click=lambda _: page.go("/edit-profile"),
                 style=ft.ButtonStyle(
-                    bgcolor={"": ft.Colors.with_opacity(0.18, ft.Colors.WHITE)},
+                    bgcolor={"": ft.Colors.with_opacity(0.18, ft.Colors.ON_PRIMARY)},
                     shape=ft.CircleBorder()
                 )
             ),
@@ -214,11 +233,53 @@ async def profile_view(page: ft.Page):
             rows_data.append(info_row(ft.Icons.ACCOUNT_BALANCE_ROUNDED, "University", university, is_last=True if not streak else False))
     if streak and int(streak) > 0:
             rows_data.append(info_row(ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, "Learning Streak", f"{streak} day" if streak ==1 else f"{streak} days", is_last=True))
-            
+    async def open_whatsapp(e):
+        message = """Just found Nu Age and it's honestly a game changer for studying! It has highly paid courses, an AI tutor and quality tutors!
+
+Check it out 👉 : nu-age.name.ng
+
+Pro tip: share it with a friend and you unlock extra study hub generations, it's worth it!"""
+        encoded_message = urllib.parse.quote(message)
+        await page.launch_url(f"https://wa.me/?text={encoded_message}")
+    rows_data.append(ft.Container(height=15))
+    rows_data.append(
+    ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.Icon(ft.Icons.CARD_GIFTCARD, color=ft.Colors.AMBER_600, size=22),
+                ft.Text(
+                    "Like what we do? Share Nu-Age for a gift!",
+                    size=14,
+                    weight=ft.FontWeight.W_500,
+                    expand=True,
+                    color=ft.Colors.ON_SURFACE
+                ),
+                ft.ElevatedButton(
+                    content="Share",
+                    icon=ft.Icons.SHARE,
+                    on_click= open_whatsapp,
+                    style=ft.ButtonStyle(
+                        bgcolor=ft.Colors.GREEN_600,
+                        color=ft.Colors.WHITE,
+                        shape=ft.RoundedRectangleBorder(radius=8),
+                    ),
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        ),
+        padding=ft.Padding.symmetric(horizontal=16, vertical=12),
+        bgcolor=ft.Colors.TERTIARY,
+        border_radius=12,
+        border=ft.Border.all(1, ft.Colors.GREEN_200),
+    )
+)
+
+         
     info_card = ft.Container(
         bgcolor=CARD_BG,
         border_radius=16,
-        border=ft.border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
+        border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
         shadow=ft.BoxShadow(
             blur_radius=12,
             color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
@@ -246,7 +307,7 @@ async def profile_view(page: ft.Page):
             expand=True,
             bgcolor=CARD_BG,
             border_radius=12,
-            border=ft.border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
+            border=ft.Border.all(1, ft.Colors.with_opacity(0.07, ft.Colors.BLACK)),
             shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK), offset=ft.Offset(0, 2)),
             ink=True,
             on_click=on_click,
@@ -270,7 +331,14 @@ async def profile_view(page: ft.Page):
         quick_action(ft.Icons.MENU_BOOK_ROUNDED,     "My Courses",  lambda _: page.go("/courses")),
         quick_action(ft.Icons.SETTINGS_OUTLINED,     "Settings", lambda _: page.go("/edit-profile")),
     ], spacing=12)
+    async def on_toggle(e):
+        await page.data["toggle_dark_mode"]()
 
+    dark_switch =ft.IconButton(
+        icon=ft.Icons.DARK_MODE,
+        tooltip="Toggle dark mode",
+        on_click=on_toggle
+    )
     # ── Body ──────────────────────────────────────────────────────────────────
     body = ft.Container(
         padding=ft.Padding(left=20, right=20, top=24, bottom=24),
@@ -279,6 +347,11 @@ async def profile_view(page: ft.Page):
             controls=[
                 section_label("Quick Actions"),
                 actions_row,
+                ft.Row(controls=[ft.Text(
+            "TOGGLE APPEARANCE: ",
+            size=11,
+           weight=ft.FontWeight.W_700,
+            color=LABEL_COLOR), dark_switch]),
                 section_label("Account Details"),
                 info_card,
             ]

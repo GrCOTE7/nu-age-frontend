@@ -22,11 +22,11 @@ def _card(content, padding=18) -> ft.Container:
     return ft.Container(
         bgcolor=ft.Colors.SURFACE,
         border_radius=16,
-        border=ft.border.all(1, ft.Colors.GREY_200),
+        border=ft.Border.all(1, ft.Colors.GREY_200),
         padding=padding,
         shadow=ft.BoxShadow(
             blur_radius=8,
-            color=ft.Colors.with_opacity(0.06, ft.Colors.BLACK),
+            color=ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE),
             offset=ft.Offset(0, 3),
         ),
         content=content,
@@ -42,11 +42,11 @@ async def dashboard_view(page: ft.Page):
     # ── greeting text (mutated after data loads) ──────────────────────────────
     greeting_name = ft.Text(
         "Hello, there!",
-        size=21, weight=ft.FontWeight.W_700, color=ft.Colors.WHITE,
+        size=21, weight=ft.FontWeight.W_700, color=ft.Colors.SURFACE,
     )
     greeting_sub = ft.Text(
         "Welcome back to your dashboard.",
-        size=13, color=ft.Colors.with_opacity(0.85, ft.Colors.WHITE),
+        size=13, color=ft.Colors.with_opacity(0.85, ft.Colors.SURFACE),
     )
 
     # ─────────────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ async def dashboard_view(page: ft.Page):
             colors=[ft.Colors.PRIMARY, ft.Colors.SECONDARY],
         ),
         border_radius=ft.BorderRadius.only(bottom_left=28, bottom_right=28),
-        padding=ft.padding.only(left=22, right=22, top=14, bottom=22),
+        padding=ft.Padding.only(left=22, right=22, top=14, bottom=22),
         content=ft.Row(
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
@@ -81,12 +81,12 @@ async def dashboard_view(page: ft.Page):
             expand=True,
             bgcolor=bg,
             border_radius=14,
-            padding=ft.padding.symmetric(horizontal=14, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             ink=True,
             on_click=lambda _, r=route: page.go(r),
             shadow=ft.BoxShadow(
                 blur_radius=6,
-                color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK),
+                color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
                 offset=ft.Offset(0, 3),
             ),
             content=ft.Column(
@@ -94,15 +94,15 @@ async def dashboard_view(page: ft.Page):
                 controls=[
                     ft.Container(
                         width=38, height=38,
-                        bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.WHITE),
+                        bgcolor=ft.Colors.with_opacity(0.18, ft.Colors.SURFACE),
                         border_radius=10,
                         alignment=ft.Alignment.CENTER,
-                        content=ft.Icon(icon, color=ft.Colors.WHITE, size=20),
+                        content=ft.Icon(icon, color=ft.Colors.SURFACE, size=20),
                     ),
                     ft.Text(label, size=13, weight=ft.FontWeight.W_700,
-                            color=ft.Colors.WHITE),
+                            color=ft.Colors.SURFACE),
                     ft.Text(sublabel, size=10,
-                            color=ft.Colors.with_opacity(0.8, ft.Colors.WHITE)),
+                            color=ft.Colors.with_opacity(0.8, ft.Colors.SURFACE)),
                 ],
             ),
         )
@@ -113,13 +113,13 @@ async def dashboard_view(page: ft.Page):
             quick_tile(
                 ft.Icons.LIBRARY_BOOKS_ROUNDED,
                 "Courses", "Browse library",
-                ft.Colors.INDIGO_400, ft.Colors.WHITE,
+                ft.Colors.INDIGO_300, ft.Colors.SURFACE,
                 "/courses",
             ),
             quick_tile(
                 ft.Icons.PEOPLE_ALT_ROUNDED,
                 "Network", "Connect & study",
-                ft.Colors.TEAL_500, ft.Colors.WHITE,
+                ft.Colors.TEAL_400, ft.Colors.SURFACE,
                 "/network",
             ),
         ],
@@ -165,9 +165,9 @@ async def dashboard_view(page: ft.Page):
                 controls=[
                     ft.Container(
                         width=48, height=48,
-                        bgcolor=ft.Colors.GREY_100,
+                        bgcolor=ft.Colors.SURFACE,
                         border_radius=24,
-                        border=ft.border.all(1, ft.Colors.GREY_300),
+                        border=ft.Border.all(1, ft.Colors.GREY_300),
                         alignment=ft.Alignment.CENTER,
                         ink=True,
                         on_click=lambda _: page.go("/network"),
@@ -177,7 +177,10 @@ async def dashboard_view(page: ft.Page):
                     ft.Text("Add", size=10, color=ft.Colors.PRIMARY),
                 ],
             ),
-            *[friend_avatar(friend["name"]) for friend in friends],
+            *[
+    friend_avatar(friend["name"] if isinstance(friend["name"], str) else "unknown")
+    for friend in friends
+],
         ],
     )
 
@@ -200,7 +203,7 @@ async def dashboard_view(page: ft.Page):
                             on_click=lambda _: page.go("/network"),
                             style=ft.ButtonStyle(
                                 color=ft.Colors.PRIMARY,
-                                padding=ft.padding.all(0),
+                                padding=ft.Padding.all(0),
                             ),
                         ),
                     ],
@@ -218,10 +221,10 @@ async def dashboard_view(page: ft.Page):
             expand=True,
             bgcolor=bg,
             border_radius=14,
-            padding=ft.padding.symmetric(horizontal=14, vertical=14),
+            padding=ft.Padding.symmetric(horizontal=14, vertical=14),
             ink=True,
             on_click=lambda _, r=route: page.go(r),
-            border=ft.border.all(1, ft.Colors.GREY_200),
+            border=ft.Border.all(1, ft.Colors.OUTLINE),
             content=ft.Column(
                 spacing=6,
                 controls=[
@@ -230,11 +233,11 @@ async def dashboard_view(page: ft.Page):
                         bgcolor=fg,
                         border_radius=10,
                         alignment=ft.Alignment.CENTER,
-                        content=ft.Icon(icon, size=18, color=ft.Colors.WHITE),
+                        content=ft.Icon(icon, size=18, color=ft.Colors.SURFACE),
                     ),
                     ft.Text(title, size=11, weight=ft.FontWeight.W_700,
-                            color=ft.Colors.ON_SURFACE),
-                    ft.Text(desc, size=10, color=ft.Colors.GREY_500,
+                            color=ft.Colors.SURFACE),
+                    ft.Text(desc, size=10, color=ft.Colors.SURFACE,
                             max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
                 ],
             ),
@@ -259,7 +262,7 @@ async def dashboard_view(page: ft.Page):
                             on_click=lambda _: page.go("/self-study"),
                             style=ft.ButtonStyle(
                                 color=ft.Colors.PRIMARY,
-                                padding=ft.padding.all(0),
+                                padding=ft.Padding.all(0),
                             ),
                         ),
                     ],
@@ -272,24 +275,24 @@ async def dashboard_view(page: ft.Page):
                             "Quick Quiz",
                             "Test what you know",
                             "/self-study",
-                            ft.Colors.PURPLE_50,
                             ft.Colors.PURPLE_400,
+                            ft.Colors.PURPLE_300,
                         ),
                         study_mode_tile(
                             ft.Icons.HISTORY_EDU_ROUNDED,
                             "Exam Prep",
                             "Revise & practice",
                             "/self-study",
-                            ft.Colors.ORANGE_50,
                             ft.Colors.ORANGE_400,
+                            ft.Colors.ORANGE_300,
                         ),
                         study_mode_tile(
                             ft.Icons.LIGHTBULB_OUTLINE_ROUNDED,
                             "Flashcards",
                             "Spaced repetition",
                             "/self-study",
-                            ft.Colors.TEAL_50,
-                            ft.Colors.TEAL_500,
+                            ft.Colors.TEAL_400,
+                            ft.Colors.TEAL_300,
                         ),
                     ],
                 ),
@@ -389,7 +392,7 @@ async def dashboard_view(page: ft.Page):
                                 "View All",
                                 on_click=lambda _: page.go("/courses"),
                                 style=ft.ButtonStyle(color=ft.Colors.PRIMARY,
-                                                     padding=ft.padding.all(0)),
+                                                     padding=ft.Padding.all(0)),
                             ),
                         ],
                     ),
@@ -515,7 +518,7 @@ async def dashboard_view(page: ft.Page):
     return ft.View(
         route="/dashboard",
         bottom_appbar=app_bar,
-        bgcolor=ft.Colors.GREY_50,
+        bgcolor=ft.Colors.ON_PRIMARY,
         padding=0,
         controls=[
             ft.SafeArea(
@@ -531,7 +534,7 @@ async def dashboard_view(page: ft.Page):
                             spacing=0,
                             controls=[
                                 ft.Container(
-                                    padding=ft.padding.symmetric(
+                                    padding=ft.Padding.symmetric(
                                         horizontal=16, vertical=16
                                     ),
                                     content=ft.Column(

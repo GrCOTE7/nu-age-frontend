@@ -73,7 +73,8 @@ jobs:
       - name: Compile the APK
         run: |
           set -o pipefail
-          if ! yes | flet build apk --product "Nu Age" --verbose 2>&1 | tee flet_build.log; then
+          yes | flet build apk --product "Nu Age" --verbose 2>&1 | tee flet_build.log || true
+          if ! grep -q "Successfully built your .apk for Android" flet_build.log; then
             echo "::error::CRITICAL ERROR: Flet compiler crashed! Check verbose logs for Dart/Python errors."
             exit 1
           fi

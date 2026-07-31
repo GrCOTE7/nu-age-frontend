@@ -1,6 +1,6 @@
 import asyncio
 import flet as ft
-import uvicorn
+#import uvicorn
 from src.Login import login_view
 from src.course_analytics import course_analytics_view
 from src.signup import Signup_view

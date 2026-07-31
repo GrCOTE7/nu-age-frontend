@@ -49,13 +49,10 @@ jobs:
       - name: Compile the APK
         run: |
           set -o pipefail
-          # yes| auto-confirms the Flutter SDK swap prompt if flet
-          # needs a specific Flutter/Dart version we don't have yet
-          if ! yes | flet build apk --product "Nu Age" --verbose --build-verbose 2>&1 | tee flet_build.log; then
+          if ! yes | flet build apk --product "Nu Age" --verbose 2>&1 | tee flet_build.log; then
             echo "::error::CRITICAL ERROR: Flet compiler crashed! Check verbose logs for Dart/Python errors."
             exit 1
           fi
-
       - name: Show extra logs on failure
         if: failure()
         run: tail -n 400 flet_build.log || true

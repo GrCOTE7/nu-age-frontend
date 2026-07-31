@@ -41,7 +41,7 @@ jobs:
           # Matched set: these were the actual versions released
           # together in May — flet-charts/flet-video never had a
           # real stable 0.84.0, only a dev pre-release.
-          pip install flet-cli==0.85.1 flet==0.85.1 flet-video==0.85.1 flet-charts==0.85.1 httpx==0.28.1 requests==2.32.3
+          pip install flet-cli==0.86.0 flet==0.86.0 flet-video==0.86.0 flet-charts==0.86.0 httpx==0.28.1 requests==2.32.3
 
       - name: Clean Flet build cache
         run: rm -rf build .flet_build ~/.flet 2>/dev/null || true

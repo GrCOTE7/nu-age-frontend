@@ -450,7 +450,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,  # supports HTML passthrough
                 code_theme=ft.MarkdownCodeTheme.ATELIER_LAKESIDE_DARK, 
                 code_style_sheet=ft.MarkdownStyleSheet(
-        code_text_style=ft.TextStyle(font_family="Roboto Mono", size=16),
+        code_text_style=ft.TextStyle(font_family="Roboto Mono", size=15),
         codeblock_decoration=ft.BoxDecoration(     # correct field name, fixes the light-mode bg bug
             bgcolor="#0662AD",
             border_radius=ft.BorderRadius.all(8),
@@ -462,12 +462,12 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 md_style_sheet=ft.MarkdownStyleSheet(
         text_alignment=ft.TextAlign.START,
         p_text_style=ft.TextStyle(
-            size=17,
+            size=15,
             weight=ft.FontWeight.W_400,
             color=ft.Colors.ON_SURFACE,
         ),
     code_text_style=ft.TextStyle(
-        size=16,
+        size=15,
         weight=ft.FontWeight.NORMAL,
         font_family="monospace",
         color=ft.Colors.ON_SURFACE_VARIANT,
@@ -608,7 +608,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         consequence_box = ft.Container(
             padding=20,
             border_radius=12,
-            bgcolor=ft.Colors.BLUE_50,
+            bgcolor=ft.Colors.SURFACE,
             border=ft.Border.all(1, ft.Colors.BLUE_200),
             visible=False, 
             content=ft.Column([
@@ -1249,6 +1249,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         # =========================================================
         # 2. ROBUST STALE-CLOSURE & DOUBLE-TAP GUARDS
         # =========================================================
+        spinner = ft.ProgressRing(width=16, height=16, stroke_width=2, color="WHITE")
         async def on_previous_click(e):
             if captured_module_idx != current_module_idx or captured_lesson_idx != current_lesson_idx:
                 return
@@ -1260,6 +1261,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
             await go_to_previous_lesson()
 
         async def on_action_click(e):
+            action_button.content=spinner
             if captured_module_idx != current_module_idx or captured_lesson_idx != current_lesson_idx:
                 return
             if action_button.disabled: return
@@ -1285,6 +1287,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
                         payload[q_key] = selected_answers
 
                 if is_incomplete:
+                    action_button.content = ft.Text(next_btn_text, weight=ft.FontWeight.BOLD, size=14)
                     snack = ft.SnackBar(
                         content=ft.Text("Please answer all questions before submitting!"),
                         bgcolor=ft.Colors.ERROR,
@@ -1295,7 +1298,8 @@ async def course_learner_view(page: ft.Page, course_id: str):
                     previous_button.disabled = False
                     page.update()
                     return
-
+                
+                action_button.content = ft.Text(next_btn_text, weight=ft.FontWeight.BOLD, size=14)
                 questions = active_les.get("content", {}).get("questions", [])
                 total_q = len(questions)
                 correct_count = 0
@@ -1499,9 +1503,9 @@ async def course_learner_view(page: ft.Page, course_id: str):
         lesson_body_scroll.content = ft.Column(
             [
                 header_container,
-                ft.Container(height=16),
+                ft.Container(height=7),
                 render_lesson_ui(active_les),
-                ft.Container(height=24),
+                ft.Container(height=8),
             ],
             scroll=ft.ScrollMode.AUTO, expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
         )
@@ -1518,12 +1522,12 @@ async def course_learner_view(page: ft.Page, course_id: str):
                 action_footer_controls.append(ft.Row([action_button], spacing=0))
 
         action_footer_container.content = ft.Container(
-            padding=ft.Padding.only(top=16), border=ft.Border.only(top=ft.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
+            padding=ft.Padding.only(top=10), border=ft.Border.only(top=ft.BorderSide(1, ft.Colors.with_opacity(0.06, ft.Colors.ON_PRIMARY))),
             content=ft.Column(action_footer_controls, spacing=10, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         )
 
         main_content_area.content = ft.Container(
-            padding=ft.Padding.all(16), border_radius=16, bgcolor=ft.Colors.SURFACE,
+            padding=ft.Padding.all(10), border_radius=16, bgcolor=ft.Colors.SURFACE,
             shadow=ft.BoxShadow(blur_radius=8, color=ft.Colors.with_opacity(0.05, ft.Colors.ON_PRIMARY), offset=ft.Offset(0, 2)),
             content=ft.Column([lesson_body_scroll, action_footer_container], expand=True, spacing=0, horizontal_alignment=ft.CrossAxisAlignment.STRETCH),
         )

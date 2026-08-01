@@ -1976,7 +1976,7 @@ async def self_study_view(page: ft.Page):
             ),
         )
 
-        n         = len(questions)
+        n= len(questions)
         # Use the backend's configured duration if it gave us one; only
         # fall back to the "90 sec/question, 5 min floor" heuristic when
         # no explicit duration was returned.
@@ -2145,35 +2145,45 @@ async def self_study_view(page: ft.Page):
                 _refresh_grid()
 
         nav_row = ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            controls=[
-                ft.OutlinedButton(
-                    "← Previous",
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=10),
-                        side=ft.BorderSide(1, ft.Colors.GREY_300),
-                        color=ft.Colors.ON_SURFACE,
-                    ),
-                    on_click=go_prev,
+    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+    controls=[
+        ft.TextButton(
+            content=ft.Text("←", size=20),
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=10),
+                side=ft.BorderSide(1, ft.Colors.GREY_300),
+                color=ft.Colors.ON_SURFACE,
+            ),
+            on_click=go_prev,
+        ),
+        ft.Container(
+            height=40,
+            content=ft.TextButton(
+                content=ft.Text("Submit Exam", size=15),
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                    elevation=0,
+                    bgcolor=ft.Colors.RED_400,
+                    color=ft.Colors.ON_PRIMARY,
                 ),
-                ft.ElevatedButton(
-                    "Submit Exam",
-                    bgcolor=ft.Colors.RED_400, color=ft.Colors.ON_PRIMARY, height=40,
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=10), elevation=0
-                    ),
-                    on_click=lambda _: confirm_submit(), # Calls our newly fixed confirm_submit
+                on_click=lambda _: confirm_submit(),
+            ),
+        ),
+        ft.Container(
+            height=40,
+            content=ft.TextButton(
+                content=ft.Text("→", size=20),
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=10),
+                    elevation=0,
+                    bgcolor=ft.Colors.PRIMARY,
+                    color=ft.Colors.ON_PRIMARY,
                 ),
-                ft.ElevatedButton(
-                    "Next →",
-                    bgcolor=ft.Colors.PRIMARY, color=ft.Colors.ON_PRIMARY, height=40,
-                    style=ft.ButtonStyle(
-                        shape=ft.RoundedRectangleBorder(radius=10), elevation=0
-                    ),
-                    on_click=go_next,
-                ),
-            ],
-        )
+                on_click=go_next,
+            ),
+        ),
+    ],
+)
 
         exam_header = ft.Container(
             bgcolor=ft.Colors.SURFACE,

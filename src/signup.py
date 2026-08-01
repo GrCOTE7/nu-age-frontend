@@ -125,6 +125,7 @@ def Signup_view(page: ft.Page):
                             print(f"CRITICAL ERROR in join_org: {org_status}")
                             validation_error.value = "Signup Successful, but a system error prevented joining the Org. Proceed to Login"
                             page.update()
+                            Submit.disabled  = False
                             return  # <-- STOP here
 
                 # 3. If we made it here, either they didn't want to join an org, or they joined it successfully!

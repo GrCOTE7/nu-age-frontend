@@ -25,6 +25,84 @@ from src.invite_members import invite_members_view
 import os
 
 
+# ─────────────────────────────────────────────
+# CENTRALIZED ERROR CLASSIFICATION / COPY
+# ─────────────────────────────────────────────
+#
+# Single source of truth for "what kind of failure is this, and what does
+# the user see for it" — used by both the route-change failure handling
+# (SnackBar / session-expired dialog) AND the per-view error fallback
+# screen (_error_fallback_view), so wording/behavior can't drift between
+# the two. Module-level (not nested in main()) so it's usable from
+# anywhere without needing page/closures.
+#
+# There are three KINDS of failure anywhere in this app:
+#   - CONNECTIVITY: the request never got a response at all (timeout,
+#     DNS failure, connection refused, offline, etc). A real "check your
+#     wifi" situation.
+#   - SERVER: the request reached the server and got back an error
+#     status (5xx). Not the user's network — the backend/infra is
+#     unhappy. A 503 specifically means "server said it's not ready".
+#   - BUG: the code itself raised something like TypeError/KeyError/
+#     IndexError/AttributeError while handling a response that DID come
+#     back successfully (e.g. `data["key"]` where `data` turned out to be
+#     a string, or an unexpected response shape). This is neither the
+#     user's network nor the server being down — it's a client-side
+#     coding mistake. Showing "Network error" for this is actively
+#     misleading (as seen: "string indices must be integers, not 'str'"
+#     displayed under a wifi icon), so it gets its own honest bucket.
+
+
+def classify_failure(ex: Exception = None, status: int = None) -> str:
+    """Returns 'connectivity', 'server', or 'bug'."""
+    if status is not None:
+        # We got an HTTP response at all, so the connection itself is
+        # fine — this is the server's problem (5xx etc).
+        return "server"
+    if isinstance(ex, (TypeError, KeyError, IndexError, AttributeError, ValueError)):
+        # These exception types almost never come from a dead connection
+        # — they come from code assuming a shape/type that the actual
+        # data didn't have. Treat as a bug, not a network issue.
+        return "bug"
+    # Everything else (ConnectionError, TimeoutError, httpx/aiohttp
+    # exceptions, DNS failures, etc.) defaults to connectivity, since
+    # that's overwhelmingly what "the request itself failed" means here.
+    return "connectivity"
+
+
+def failure_copy(kind: str, ex: Exception = None, status: int = None) -> dict:
+    """What the user sees for each failure kind, in both the SnackBar
+    (fell back to a previous view) and dialog/screen (nothing to fall
+    back to) forms. `dev_detail` is the raw exception text — always
+    available for a "Details" toggle, but never shown by default."""
+    dev_detail = (str(ex) if ex else None) or (type(ex).__name__ if ex else None)
+
+    if kind == "server":
+        detail = f" (error {status})" if status is not None else ""
+        return {
+            "icon": ft.Icons.DNS_OUTLINED,
+            "snack_message": "Server error, please try again",
+            "dialog_title": "Server error",
+            "dialog_message": f"Something went wrong on our end{detail}. Please try again shortly.",
+            "dev_detail": dev_detail or (f"HTTP {status}" if status else None),
+        }
+    if kind == "bug":
+        return {
+            "icon": ft.Icons.BUG_REPORT_OUTLINED,
+            "snack_message": "Something went wrong, please try again",
+            "dialog_title": "Something went wrong",
+            "dialog_message": "This page hit an unexpected problem. Please try again — if it keeps happening, let us know.",
+            "dev_detail": dev_detail,
+        }
+    return {
+        "icon": ft.Icons.WIFI_OFF,
+        "snack_message": "Network error, please try again",
+        "dialog_title": "Connection error",
+        "dialog_message": "Couldn't reach the server. Check your connection and try again.",
+        "dev_detail": dev_detail,
+    }
+
+
 async def main(page: ft.Page):
     async def keep_alive():
         while True:
@@ -182,11 +260,26 @@ async def main(page: ft.Page):
     # SKELETON LOADING HELPERS
     # ─────────────────────────────────────────────
 
-    def _error_fallback_view(route: str, ex: Exception) -> ft.View:
+    def _error_fallback_view(route: str, ex: Exception, status: int = None) -> ft.View:
         """A visible error screen used whenever a view fails to load —
         whether it raised an exception or silently returned nothing. Ensures
         the user always sees *something* explaining the failure, with a way
-        to retry, instead of a dead blank screen."""
+        to retry, instead of a dead blank screen.
+
+        Uses the same classify_failure()/failure_copy() as the rest of the
+        app's error handling (see module-level definitions near the top of
+        this file), so this screen and the SnackBar/dialog notices always
+        agree on wording — and so a code bug (e.g. "string indices must be
+        integers, not 'str'") shows as "Something went wrong", not under a
+        wifi-off icon with "This page couldn't load", which is what was
+        happening before this screen was wired into the shared classifier.
+
+        The raw exception text is still available — behind a "Details"
+        toggle, collapsed by default — rather than permanently on screen.
+        Keeps the friendly message for regular users while the exact error
+        is still one tap away for debugging."""
+        kind = classify_failure(ex, status)
+        copy = failure_copy(kind, ex, status)
 
         def retry(e):
             # page.route already equals `route` here (this view's own
@@ -196,25 +289,55 @@ async def main(page: ft.Page):
             # of relying on a "route change" the client won't detect.
             page.run_task(route_change, None)
 
-        return ft.View(
-            route=route,
-            controls=[
-                ft.Column(
-                    [
-                        ft.Icon(ft.Icons.WIFI_OFF, color=ft.Colors.ERROR, size=40),
-                        ft.Text("This page couldn't load.", size=16, weight=ft.FontWeight.BOLD),
-                        ft.Text(str(ex) or type(ex).__name__, size=12, color=ft.Colors.OUTLINE),
-                        ft.FilledButton("Retry", on_click=retry),
-                    ],
-                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                    alignment=ft.MainAxisAlignment.CENTER,
-                    spacing=12,
-                    expand=True,
-                )
-            ],
-            padding=20,
+        details_text = ft.Text(
+            copy["dev_detail"] or "No further detail available.",
+            size=11,
+            color=ft.Colors.BLACK,
+            selectable=True,
+        )
+        details_container = ft.Container(
+            content=details_text,
+            visible=False,
+            padding=ft.Padding.symmetric(horizontal=16, vertical=10),
+            bgcolor=ft.Colors.with_opacity(0.05, ft.Colors.ON_SURFACE),
+            border_radius=8,
+            width=320,
         )
 
+        def toggle_details(e):
+            details_container.visible = not details_container.visible
+            toggle_button.text = "Hide details" if details_container.visible else "Show details"
+            page.update()
+
+        toggle_button = ft.TextButton("Show details", on_click=toggle_details)
+
+        return ft.View(
+    route=route,
+    controls=[
+        ft.Column(
+            [
+                ft.Icon(copy["icon"], color=ft.Colors.ERROR, size=40),
+                ft.Text(copy["dialog_title"], size=16, weight=ft.FontWeight.BOLD),
+                ft.Text(
+                    copy["dialog_message"],
+                    size=13,
+                    color=ft.Colors.OUTLINE,
+                    text_align=ft.TextAlign.CENTER,
+                ),
+                ft.FilledButton("Retry", on_click=retry),
+                toggle_button,
+                details_container,
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=12,
+            expand=True,
+        )
+    ],
+    vertical_alignment=ft.MainAxisAlignment.CENTER,
+    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+    padding=20,
+)
     def shimmer_box(radius=12, height=None, width=None, expand = False):
         """A single placeholder rectangle. Its opacity gets pulsed by the
         shimmer loop below to create the animated shimmer effect. Pass
@@ -875,12 +998,13 @@ async def main(page: ft.Page):
         check that ran before this), reuse it instead of flickering closed
         and reopening a fresh one.
 
-        on_failure(route, ex) -> bool, if given, is called when the view
+        on_failure(route, ex) -> bool, if given, is awaited when the view
         fails to load. It should push whatever should be shown instead
         (typically: restore the previous view) directly onto page.views,
         and return True if it did so (meaning load_view should NOT also
         push its own dedicated error screen) or False if there was nothing
-        to fall back to (meaning load_view should show the error screen)."""
+        to fall back to (meaning load_view should show the error screen).
+        May be a sync or async callable — both are supported."""
         if existing_skeleton is not None:
             skel = existing_skeleton
             shimmer_task = existing_shimmer_task
@@ -906,7 +1030,10 @@ async def main(page: ft.Page):
 
             fell_back = False
             if on_failure is not None:
-                fell_back = on_failure(route, ex)
+                result = on_failure(route, ex)
+                if asyncio.iscoroutine(result):
+                    result = await result
+                fell_back = result
 
             if not fell_back:
                 page.views.append(_error_fallback_view(route, ex))
@@ -986,15 +1113,42 @@ async def main(page: ft.Page):
         # the new route fails to load we can restore it (with an error
         # dialog on top) instead of leaving the user on a dead-end error
         # page or a blank screen.
+        #
+        # BUG FIX (root cause of both the login shimmer-loop and the
+        # "navigation failure doesn't stay put" regression): this used to
+        # do `page.views.clear()` right here, unconditionally, before we
+        # even knew whether the new route would load successfully. That
+        # meant:
+        #   1. `previous_view` became a *removed* View instance — Flet
+        #      doesn't reliably support reviving an already-torn-down view
+        #      by re-appending the same object later, so "restoring" it on
+        #      failure often just left the client stuck on whatever was
+        #      last rendered (the shimmer).
+        #   2. On the very first protected navigation after login,
+        #      `previous_view` was the login view itself. If the auth
+        #      check then failed (e.g. a real network hiccup — much more
+        #      likely on desktop/mobile builds than on web, since they use
+        #      a real HTTP client instead of the browser's fetch),
+        #      "restoring" put the user BACK on the login view. If that
+        #      view re-checks the stored token on mount and redirects,
+        #      this re-enters route_change and repeats — the shimmer /
+        #      red-error / shimmer loop you were seeing.
+        #
+        # Fix: never destroy the current views up front. Keep whatever is
+        # already on screen, push the new skeleton ON TOP of it, and only
+        # remove the old view once the new one has actually succeeded. On
+        # failure, we simply pop the skeleton/error screen back off —
+        # the previous view was never touched, so it's still exactly as
+        # it was, no risky re-append of a stale instance required.
         previous_view = page.views[-1] if page.views else None
+        previous_route = previous_view.route if previous_view is not None else None
 
-        page.views.clear()
         troute = ft.TemplateRoute(page.route)
 
         def is_public_route(route):
             return route in ["/", "/signup"] or route.startswith("/accept-invite/")
 
-        def show_error_dialog(message: str = "Network error, please try again", title: str = None):
+        def show_error_dialog(message: str = "Network error, please try again", title: str = None, icon=None):
             """Sleek, non-blocking error notice shown after falling back to
             the previous view. Uses a SnackBar (not a modal AlertDialog) so
             the view underneath stays fully interactable — the user can keep
@@ -1003,7 +1157,7 @@ async def main(page: ft.Page):
             snack = ft.SnackBar(
                 content=ft.Row(
                     [
-                        ft.Icon(ft.Icons.WIFI_OFF, color=ft.Colors.ON_PRIMARY, size=20),
+                        ft.Icon(icon or ft.Icons.WIFI_OFF, color=ft.Colors.ON_PRIMARY, size=20),
                         ft.Text(message, color=ft.Colors.ON_PRIMARY),
                     ],
                     spacing=10,
@@ -1019,13 +1173,84 @@ async def main(page: ft.Page):
             snack.open = True
             page.update()
 
-        def restore_previous_or_fallback(route: str, ex: Exception):
+        # ─────────────────────────────────────────────
+        # CENTRALIZED ERROR REPORTING
+        # ─────────────────────────────────────────────
+        #
+        # Every place in this file that can fail while loading a page
+        # funnels through report_failure() for what the user sees. Before
+        # this, each call site hand-wrote its own message/title, which
+        # made wording drift and made it easy to mislabel a bug as a
+        # network error (as happened: a TypeError from bad response
+        # parsing was shown to users under a wifi-off icon). The actual
+        # classify_failure()/failure_copy() logic lives at module level
+        # (top of file) so _error_fallback_view — which needs the same
+        # copy but isn't nested inside this function — can share it too.
+
+        async def report_failure(
+            fell_back: bool,
+            ex: Exception = None,
+            status: int = None,
+            auto_redirect_seconds: int = 6,
+        ):
+            """Call this after a load/auth-check has already failed and
+            (if applicable) already fallen back to the previous view.
+            Picks connectivity vs. server vs. bug wording automatically
+            and shows the right widget:
+              - fell_back=True  -> SnackBar over the restored previous view
+              - fell_back=False -> blocking dialog (nothing to fall back to)
+            """
+            kind = classify_failure(ex, status)
+            copy = failure_copy(kind, ex, status)
+            if fell_back:
+                show_error_dialog(copy["snack_message"], icon=copy["icon"])
+            else:
+                await show_session_expired_dialog(
+                    copy["dialog_message"],
+                    auto_redirect_seconds=auto_redirect_seconds,
+                    title=copy["dialog_title"],
+                    redirect_to_login=False,
+                )
+
+        async def restore_previous_or_fallback(route: str, ex: Exception, status: int = None):
             """On failure: if we have a previous view to go back to, restore
             it (caller shows a dialog on top). Otherwise — e.g. this was the
-            very first view of the session — show the dedicated error
-            fallback screen since there's nothing to fall back to."""
-            if previous_view is not None:
-                page.views.append(previous_view)
+            very first view of the session, or the only thing we have to
+            fall back to is a public/login view — show the dedicated error
+            fallback screen since there's nothing safe to fall back to.
+
+            BUG FIX: previously this re-appended the `previous_view` object
+            after `page.views` had already been cleared. Flet views aren't
+            reliably revivable that way once torn down client-side, which
+            is why "falling back" often just left the UI stuck on whatever
+            was last rendered (the shimmer). Now that we never clear
+            `page.views` up front, the previous view is *still on screen*
+            underneath whatever we pushed for the failed navigation — so
+            "restoring" is just popping those failed layers back off,
+            no re-append needed.
+
+            We also refuse to restore into a public route (login/signup).
+            That was the source of the login shimmer-loop: right after
+            login, the previous view is the login screen itself. If a
+            transient network error hit the very next auth check, we'd
+            silently drop the user back onto login, which then re-checks
+            the stored token and re-navigates to /dashboard, re-entering
+            this whole flow. Since there's nothing safe to fall back to in
+            that case, we show the dedicated error screen instead (with a
+            Retry button) rather than bouncing back into login.
+            """
+            if previous_view is not None and not is_public_route(previous_route):
+                # Pop everything we pushed for this failed navigation
+                # (skeleton and/or error view) down to the previous view,
+                # which was never removed from page.views.
+                while page.views and page.views[-1] is not previous_view:
+                    page.views.pop()
+
+                if not page.views:
+                    # Defensive fallback — should not normally happen since
+                    # previous_view should still be in the list.
+                    page.views.append(previous_view)
+
                 # page.route currently points at the route that just failed
                 # to load (e.g. "/courses"), but the view actually on screen
                 # is the previous one (e.g. "/dashboard"). Keep them in sync
@@ -1039,16 +1264,29 @@ async def main(page: ft.Page):
                 # time the user taps a nav item for that same destination,
                 # the client router sees "already there" (same route string
                 # as its own history) and never re-fires on_route_change —
-                # the tap silently does nothing. Explicitly pushing the
-                # route back to the client (fire-and-forget; route_change
-                # itself is guarded against re-entrancy issues by being the
-                # only writer of page.views) keeps the browser's actual
-                # navigation state in sync with what's really on screen.
+                # the tap silently does nothing. We now AWAIT push_route
+                # (previously fire-and-forget via page.run_task, so a
+                # failure here was invisible and the resync wasn't
+                # guaranteed to happen before we told the caller "restored
+                # successfully") to keep the browser's actual navigation
+                # state in sync with what's really on screen.
                 page.route = previous_view.route
-                page.run_task(page.push_route, previous_view.route, skip_route_change_event=True)
+                try:
+                    await page.push_route(previous_view.route, skip_route_change_event=True)
+                except Exception as resync_ex:
+                    print(f"restore_previous_or_fallback: push_route resync failed: {resync_ex!r}")
                 return True
             else:
-                page.views.append(_error_fallback_view(route, ex))
+                # Nothing safe to fall back to (first view of the session,
+                # or the only prior view was login/signup) — show the
+                # dedicated error screen with a Retry button instead.
+                while page.views and page.views[-1] is not previous_view:
+                    page.views.pop()
+                if page.views and page.views[-1] is previous_view and is_public_route(previous_route):
+                    # Don't leave the public view underneath either — pop it
+                    # too, since we're intentionally not restoring into it.
+                    page.views.pop()
+                page.views.append(_error_fallback_view(route, ex, status))
                 return False
 
         # Tracks whether the last load_view() call fell back to a previous
@@ -1056,22 +1294,28 @@ async def main(page: ft.Page):
         # to also pop up an explanatory dialog afterwards.
         failure_state = {"fell_back": False, "ex": None}
 
-        def on_view_failure(route: str, ex: Exception) -> bool:
-            fell_back = restore_previous_or_fallback(route, ex)
+        async def on_view_failure(route: str, ex: Exception) -> bool:
+            fell_back = await restore_previous_or_fallback(route, ex)
             failure_state["fell_back"] = fell_back
             failure_state["ex"] = ex
             return fell_back
 
         async def load_view_and_report(coro, route: str, skel=None, shimmer=None):
             """Thin wrapper around load_view() that also shows the
-            'something went wrong' dialog afterwards if it fell back to the
+            'something went wrong' notice afterwards if it fell back to the
             previous view, so the user understands why the screen didn't
             change even though nothing crashed loudly."""
             failure_state["fell_back"] = False
             failure_state["ex"] = None
             await load_view(coro, route, skel, shimmer, on_failure=on_view_failure)
             if failure_state["fell_back"]:
-                show_error_dialog("Network error, please try again")
+                # A view's own load failed. We don't have an HTTP status
+                # here (the exception came from inside the view's own
+                # data-fetching code), so this always classifies as
+                # "connectivity" — reasonable default, since the far more
+                # common case is a timed-out/failed request deep inside
+                # the view rather than a clean HTTP error response.
+                await report_failure(fell_back=True, ex=failure_state["ex"])
 
         async def show_session_expired_dialog(
             message: str,
@@ -1148,17 +1392,9 @@ async def main(page: ft.Page):
                 # rather than stranding the user on a dialog-only screen.
                 shimmer_task.cancel()
                 page.views.pop()
-                fell_back = restore_previous_or_fallback(page.route, ex)
+                fell_back = await restore_previous_or_fallback(page.route, ex)
                 page.update()
-                if fell_back:
-                    show_error_dialog("Network error, please try again")
-                else:
-                    await show_session_expired_dialog(
-                        f"Couldn't reach the server: {ex}",
-                        auto_redirect_seconds=6,
-                        title="Connection error",
-                        redirect_to_login=False,
-                    )
+                await report_failure(fell_back=fell_back, ex=ex)
                 return
 
             if status == 200:
@@ -1176,20 +1412,19 @@ async def main(page: ft.Page):
                 # Some other backend error (500, 503, etc). The token might
                 # still be valid — don't destroy it. Fall back to whatever
                 # was on screen before, rather than a dead-end dialog.
+                #
+                # This is where a 503 lands. It's classified as a SERVER
+                # failure (see classify_failure/report_failure above), not
+                # a network/connectivity one — the request reached the
+                # backend and got a real response, it's just telling us
+                # it's unavailable. That's on the backend/infra, not the
+                # client or the user's connection.
                 shimmer_task.cancel()
                 page.views.pop()
                 server_ex = RuntimeError(f"Server error {status}")
-                fell_back = restore_previous_or_fallback(page.route, server_ex)
+                fell_back = await restore_previous_or_fallback(page.route, server_ex, status=status)
                 page.update()
-                if fell_back:
-                    show_error_dialog("Network error, please try again")
-                else:
-                    await show_session_expired_dialog(
-                        f"Something went wrong (error {status}). Please try again.",
-                        auto_redirect_seconds=6,
-                        title="Server error",
-                        redirect_to_login=False,
-                    )
+                await report_failure(fell_back=fell_back, status=status)
                 return
 
             # Auth check passed — hand the still-running skeleton off to
@@ -1202,13 +1437,34 @@ async def main(page: ft.Page):
             active_shimmer_task = None
 
         # --- VIEW MAPPING ---
+        #
+        # NOTE on why public routes (/, /login, /signup) clear page.views
+        # here but protected routes don't: protected routes already had a
+        # skeleton pushed ON TOP of whatever was previously on screen (see
+        # the auth-check block above), and load_view_and_report/load_view
+        # replace just that top slot (`page.views[-1] = real_view`) once
+        # ready — so the stack never grows unbounded and previous_view
+        # stays intact underneath for restore_previous_or_fallback to use
+        # if the load fails.
+        #
+        # Public routes don't go through that skeleton dance at all (see
+        # `if not is_public_route(page.route):` above, which is skipped
+        # for them), so nothing has trimmed the stack for them yet. Since
+        # we no longer do an unconditional page.views.clear() at the top
+        # of this function, we clear explicitly here before mounting them
+        # — otherwise navigating to /login or /signup would just stack a
+        # new view on top of whatever was already showing instead of
+        # replacing it.
         if page.route == "/dashboard":
             await load_view_and_report(dashboard_view(page), page.route, active_skeleton, active_shimmer_task)
         elif page.route == "/":
+            page.views.clear()
             page.views.append(login_view(page))
         elif page.route == "/login":
+            page.views.clear()
             page.views.append(login_view(page))
         elif page.route == "/signup":
+            page.views.clear()
             page.views.append(Signup_view(page))
         elif page.route == "/profile":
             await load_view_and_report(profile_view(page), page.route, active_skeleton, active_shimmer_task)
@@ -1249,6 +1505,10 @@ async def main(page: ft.Page):
             # Safely extract the token natively and mount the invite view.
             # member_invite_view is a regular (non-async) function that
             # returns a View directly, so no `await` here — skip the skeleton.
+            # This is also a public route (see is_public_route) that
+            # bypasses the auth-check/skeleton block above, so — same as
+            # /, /login, /signup — it needs its own explicit clear.
+            page.views.clear()
             page.views.append(member_invite_view(page, token=troute.token))
         elif troute.match("/organisations/:org_id/invite-members"):
             # Safely extract the query parameter ('3839') natively
@@ -1276,11 +1536,40 @@ async def main(page: ft.Page):
             elif active_skeleton is not None:
                 # No sub-route matched, but we already pushed a skeleton
                 # during the auth check — don't leave it stuck on screen.
+                #
+                # BUG FIX: this used to only cancel the shimmer *task*,
+                # which stops the pulsing animation but does NOT remove
+                # the now-frozen skeleton *view* from page.views. The user
+                # was left staring at a static, no-longer-animating
+                # skeleton indefinitely — visually indistinguishable from
+                # "stuck on shimmer". Actually pop it and restore/fallback
+                # like any other navigation failure.
+                #
+                # NOTE: this is a routing bug (no branch matched the
+                # route), not a network or server failure — don't run it
+                # through report_failure()'s network/server wording, that
+                # would misinform the user about what actually went wrong.
                 active_shimmer_task.cancel()
+                if page.views and page.views[-1] is active_skeleton:
+                    page.views.pop()
+                fell_back = await restore_previous_or_fallback(
+                    page.route, RuntimeError(f"Unknown route: {page.route}")
+                )
+                if fell_back:
+                    show_error_dialog("That page couldn't be found", icon=ft.Icons.ERROR_OUTLINE)
         elif active_skeleton is not None:
-            # Protected route matched none of the branches above — clean up
-            # the skeleton so it doesn't sit there shimmering forever.
+            # Protected route matched none of the branches above — same
+            # fix as directly above: actually remove the frozen skeleton,
+            # don't just stop its animation. Also a routing bug, not a
+            # network/server failure — see note above.
             active_shimmer_task.cancel()
+            if page.views and page.views[-1] is active_skeleton:
+                page.views.pop()
+            fell_back = await restore_previous_or_fallback(
+                page.route, RuntimeError(f"Unknown route: {page.route}")
+            )
+            if fell_back:
+                show_error_dialog("That page couldn't be found", icon=ft.Icons.ERROR_OUTLINE)
 
         saved_mode = await page.shared_preferences.get("dark_mode")
         await apply_theme(saved_mode == "true")

@@ -52,12 +52,22 @@ async def signup_request(email: str, username: str, password: str, first_name: s
     if organisation is not None:
         payload["organisation"] = organisation
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        response = await client.post(
-            f"{api_url}/users/auth/register", 
-            json=payload 
-        )
-        return response.status_code, response.json()
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:  # bumped from 10s, matches login
+            response = await client.post(
+                f"{api_url}/users/auth/register", 
+                json=payload 
+            )
+            try:
+                return response.status_code, response.json()
+            except json.decoder.JSONDecodeError:
+                return response.status_code, {"detail": "Server error or waking up. Please try again."}
+
+    except httpx.ReadTimeout:
+        return 504, {"detail": "The server is waking up. Please try again."}
+
+    except httpx.RequestError as e:
+        return 503, {"detail": "Please check your internet connection and try again."}
 
 async def get_current_user_request(token: str):
 

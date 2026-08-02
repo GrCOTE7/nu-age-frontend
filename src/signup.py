@@ -313,7 +313,13 @@ def Signup_view(page: ft.Page):
     async def load_universities():
         try:
             universities_data = await get_universities()
-            
+
+            # If the user has already navigated away (e.g. finished OTP and
+            # went to /login) while this request was in flight, stop here —
+            # there's no page/control left to update.
+            if page.route != "/signup":
+                return
+
             # Defensively check if it returned an error dictionary
             if isinstance(universities_data, dict) and "error" in universities_data:
                 err_msg = universities_data.get("error", "Failed to connect.")
@@ -359,11 +365,18 @@ def Signup_view(page: ft.Page):
             University.hint_text = "Failed to load universities"
             University.disabled = True
             
-        # Push the changes to the UI safely
-        if University.page:
-            University.update()
-        else:
-            page.update()
+        # Push the changes to the UI safely.
+        # NOTE: checking `University.page` can itself raise RuntimeError if the
+        # control has since been removed from the page (e.g. user already
+        # navigated away to /login while this background task was running).
+        try:
+            if University.page:
+                University.update()
+            else:
+                page.update()
+        except RuntimeError:
+            # View/control no longer attached — nothing to update, safe to ignore.
+            pass
 
     # 3. Trigger the fetch in the background without freezing the screen
     page.run_task(load_universities)

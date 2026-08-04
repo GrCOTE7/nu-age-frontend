@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 import typing
 
 api_url = "https://api.nu-age.name.ng"
@@ -16,7 +17,7 @@ async def get_due_cards(token: str, material_ids: typing.Optional[list] = None) 
         params["material_ids"] = ",".join(material_ids)
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             response.raise_for_status()
             return response.json()
@@ -40,7 +41,7 @@ async def post_review(token: str, card_id: str, quality: int) -> dict:
     payload = {"card_id": card_id, "quality": quality}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             return response.json()
@@ -64,7 +65,7 @@ async def save_card(token: str, front: str, back: str, source_material_id: typin
     }
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             return response.json()
@@ -83,7 +84,7 @@ async def get_materials(token: str) -> list:
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             return response.json()
@@ -123,7 +124,7 @@ async def upload_material(
 
     try:
         # Timeout extended for file uploads
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=ssl_context) as client:
             if files:
                 response = await client.post(url, headers=headers, data=data, files=files)
             else:
@@ -151,7 +152,7 @@ async def get_quiz_questions(token: str, material_ids: typing.Optional[list] = N
         params["material_ids"] = ",".join(material_ids)
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             response.raise_for_status()
             return response.json()
@@ -178,7 +179,7 @@ async def get_exam_questions(token: str, material_ids: typing.Optional[list] = N
         params["material_ids"] = ",".join(material_ids)
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             response.raise_for_status()
             return response.json()
@@ -205,7 +206,7 @@ async def generate_from_materials(token: str, material_ids: list, types: list) -
     }
 
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=45.0, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             return response.json()
@@ -224,7 +225,7 @@ async def check_generation_status(token: str, material_id: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             return response.json()  # Expects {"status": "completed" | "processing"}

@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 import json
 
 api_url = "https://api.nu-age.name.ng"
@@ -12,7 +13,7 @@ async def get_enrollments(token: str, params: dict | None = None):
     url = f"{api_url}/courses/enrolled"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()  # Returns the list
@@ -41,7 +42,7 @@ async def enrol_user(token: str, course_id, params: dict | None = None):
     url = f"{api_url}/courses/{course_id}/enrol"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.status_code, response.json()
@@ -66,7 +67,7 @@ async def get_enrolled_students(token: str, course_id: str, params: dict | None 
     url = f"{api_url}/courses/{course_id}/enrollments/org-students"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()
@@ -90,7 +91,7 @@ async def bulk_enrol_students(token: str, course_id, payload, params: dict | Non
     url = f"{api_url}/courses/{course_id}/enrollments/bulk-enroll"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, params=params, json=payload)
             if response.status_code == 200:
                 return response.json()
@@ -115,7 +116,7 @@ async def bulk_unenrol_students(token: str, course_id, payload, params: dict | N
     url = f"{api_url}/courses/{course_id}/enrollments/bulk-unenroll"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, params=params, json=payload)
             if response.status_code == 200:
                 return response.json()
@@ -143,7 +144,7 @@ async def get_enrollment(token: str, course_id):
     url = f"{api_url}/courses/{course_id}/enrollment"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             return response.json()
@@ -172,7 +173,7 @@ async def get_enrollment_stats(token: str, enrollment_id: str):
     headers = {"Authorization": f"Bearer {token}"}
     # Force a 10-second timeout so it never hangs infinitely
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             return response.json()
@@ -207,7 +208,7 @@ async def get_weekly_activity(token: str, course_id: str, params: dict | None = 
         params = {"period": "weekly"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()

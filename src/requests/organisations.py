@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 
 api_url = "https://api.nu-age.name.ng"
 
@@ -12,7 +13,7 @@ async def create_organisation(token: str, payload):
     headers = {"Authorization": f"Bearer {token}"}
     payload = {**payload}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 return response.json()
@@ -32,7 +33,7 @@ async def get_my_organisation(token: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 return response.json()
@@ -52,7 +53,7 @@ async def get_organisation_members(token: str, id: str, students: bool = False, 
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 return response.json()
@@ -83,7 +84,7 @@ async def get_organisation_courses(
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 return response.json()
@@ -103,7 +104,7 @@ async def join_org(org_id: str, user_id: str):
     url = f"{api_url}/organisations/{org_id}/join?user_id={user_id}"
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url)
 
             if response.status_code == 200:
@@ -126,7 +127,7 @@ async def process_invite_token(token: str) -> dict:
     url = f"{api_url}/organisations/process-invite"
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, json={"token": token})
 
             if response.status_code == 200:
@@ -148,7 +149,7 @@ async def get_pending_invitations(token: str, org_id: str) -> dict:
     url = f"{api_url}/organisations/{org_id}/invitations/pending"
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
 
             if response.status_code == 200:
@@ -170,7 +171,7 @@ async def revoke_invitation(token: str, invite_id: str) -> dict:
     url = f"{api_url}/organisations/invitations/{invite_id}/revoke"
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.delete(url, headers={"Authorization": f"Bearer {token}"})
 
             if response.status_code == 200:
@@ -194,7 +195,7 @@ async def send_org_invite(token: str, org_id: str, email: str, role: str) -> dic
     payload = {"organisation_id": org_id, "target_email": email, "role": role}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
 
             if response.status_code == 200:
@@ -217,7 +218,7 @@ async def get_joined_organisations(token: str) -> list:
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
 
             if response.status_code == 200:
@@ -234,13 +235,14 @@ async def get_joined_organisations(token: str) -> list:
         print(f"get_joined_organisations request error: {e}")
         return []
 
-    ("/{course_id}/enrollments/org-students")
-
 async def get_enrolled_org_students(token: str, course_id: str, params: dict | None = None):
+    # NOTE: was previously missing the /courses prefix and would 404 against
+    # the real FastAPI route. This duplicates enrollments.get_enrolled_students —
+    # consider calling that instead of keeping two copies in sync.
     url = f"{api_url}/{course_id}/enrollments/org-students"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()

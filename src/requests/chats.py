@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 import asyncio
 import json
 import websockets
@@ -25,7 +26,7 @@ async def get_user_channels(token: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 return response.json()
@@ -48,7 +49,7 @@ async def get_channel_messages(token: str, channel_id: str, limit: int = 50, off
     params = {"limit": limit, "offset": offset}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()
@@ -79,7 +80,7 @@ async def create_group_channel(token: str, name: str, channel_type: str, org_id:
     }
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 return response.json()
@@ -98,7 +99,7 @@ async def start_direct_message(token: str, target_user_id: str, params: dict | N
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()
@@ -225,7 +226,7 @@ async def get_all_users(token: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 return response.json()
@@ -242,7 +243,7 @@ async def get_group_members(token: str, channel_id: str):
     url = f"{api_url}/chat/channels/{channel_id}/members"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 return response.json().get("member_ids", [])
@@ -263,7 +264,7 @@ async def add_group_members(token: str, channel_id: str, member_ids: list):
     headers = {"Authorization": f"Bearer {token}"}
     payload = {"member_ids": member_ids}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 return response.json()
@@ -282,7 +283,7 @@ async def delete_chat_channel(token: str, channel_id: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.delete(url, headers=headers)
 
             if response.status_code == 200:
@@ -307,7 +308,7 @@ async def leave_group_channel(token: str, channel_id: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.delete(url, headers=headers)
             response.raise_for_status()
             return response.json()

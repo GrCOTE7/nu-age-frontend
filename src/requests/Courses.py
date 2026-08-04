@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 import asyncio
 api_url = "https://api.nu-age.name.ng"
 
@@ -12,7 +13,7 @@ async def get_courses(token: str, params: dict | None = None):
     url = f"{api_url}/courses"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 print("Courses fetched successfully")
@@ -39,7 +40,7 @@ async def create_course(token: str, payload):
     headers = {"Authorization": f"Bearer {token}"}
     payload = {**payload}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 return response.json()
@@ -64,7 +65,7 @@ async def get_categories(token: str, params: dict | None = None):
     url = f"{api_url}/categories"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 print("Categories fetched successfully")
@@ -101,7 +102,7 @@ async def upload_video_background(token: str, file_name: str, file_bytes: bytes)
 
     try:
         # 300-second timeout handles large video files without crashing
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=300.0, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, files=multipart_files)
 
             if response.status_code == 200:
@@ -149,7 +150,7 @@ async def upload_asset_background(token: str, course_id: str, asset_type: str, f
     }
 
     try:
-        async with httpx.AsyncClient(timeout=300.0) as client:
+        async with httpx.AsyncClient(timeout=300.0, verify=ssl_context) as client:
             # httpx automatically combines form_data and multipart_files
             response = await client.post(url, headers=headers, data=form_data, files=multipart_files)
 
@@ -183,7 +184,7 @@ async def save_bulk_curriculum(token: str, course_id: str, payload: dict):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=payload)
 
             if response.status_code == 200:
@@ -215,7 +216,7 @@ async def get_course_curriculum(token: str, course_id: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
 
             if response.status_code == 200:
@@ -249,7 +250,7 @@ async def update_course_settings(token: str, course_id: str, setting: dict):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers, json=setting)
 
             if response.status_code == 200:
@@ -283,7 +284,7 @@ async def delete_course(token: str, course_id: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.delete(url, headers=headers)
 
             if response.status_code == 200:
@@ -317,7 +318,7 @@ async def mark_complete(token: str, course_id: str, lesson_id: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(url, headers=headers)
 
             if response.status_code == 200:
@@ -349,7 +350,7 @@ async def generate_course_certificate(token: str, course_id: str):
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=60.0) as client:  # Generates can take a few seconds
+        async with httpx.AsyncClient(timeout=60.0, verify=ssl_context) as client:  # Generates can take a few seconds
             response = await client.post(url, headers=headers)
             if response.status_code == 200:
                 return response.json()
@@ -373,7 +374,7 @@ async def start_course_draft_job(token: str, topic: str, context: str) -> dict:
     payload = {"topic": topic, "context": context}
  
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:  # fast call now, no AI wait here
+        async with httpx.AsyncClient(timeout=30.0, verify=ssl_context) as client:  # fast call now, no AI wait here
             response = await client.post(url, headers=headers, json=payload)
  
         if response.status_code == 202:
@@ -419,7 +420,7 @@ async def poll_course_draft_job(
     headers = {"Authorization": f"Bearer {token}"}
     elapsed = 0.0
  
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=30.0, verify=ssl_context) as client:
         while elapsed < max_wait_seconds:
             try:
                 response = await client.get(url, headers=headers)
@@ -475,7 +476,7 @@ async def get_completion_stats(token: str, course_id: str, params: dict | None =
     url = f"{api_url}/courses/{course_id}/completion-stats"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()
@@ -499,7 +500,7 @@ async def get_certificates_issued(token: str, course_id: str, params: dict | Non
     url = f"{api_url}/courses/{course_id}/certificates"
     headers = {"Authorization": f"Bearer {token}"}
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code == 200:
                 return response.json()

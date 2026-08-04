@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 import json
 api_url = "https://api.nu-age.name.ng"
 
@@ -8,7 +9,7 @@ async def login_request(email: str, password: str):
     limits = httpx.Timeout(15.0) 
     
     try:
-        async with httpx.AsyncClient(timeout=limits) as client:
+        async with httpx.AsyncClient(timeout=limits, verify=ssl_context) as client:
             response = await client.post(
                 f"{api_url}/users/auth/login", 
                 data={'username': email, 'password': password} 
@@ -53,7 +54,7 @@ async def signup_request(email: str, username: str, password: str, first_name: s
         payload["organisation"] = organisation
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:  # bumped from 10s, matches login
+        async with httpx.AsyncClient(timeout=15.0, verify=ssl_context) as client:  # bumped from 10s, matches login
             response = await client.post(
                 f"{api_url}/users/auth/register", 
                 json=payload 
@@ -76,7 +77,7 @@ async def get_current_user_request(token: str):
     limits = httpx.Timeout(15.0)
 
     try:
-        async with httpx.AsyncClient(timeout=limits) as client:
+        async with httpx.AsyncClient(timeout=limits, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             try:
                 return response.status_code, response.json()
@@ -97,7 +98,7 @@ async def get_current_user_request(token: str):
 async def reset_request(token: str, payload: dict):
     payload = payload
     headers = {"Authorization": f"Bearer {token}"}
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=10.0, verify=ssl_context) as client:
         response = await client.patch(
             f"{api_url}/users/me/update", 
             json=payload, headers=headers
@@ -109,7 +110,7 @@ async def get_universities():
     
     try:
         # Added a timeout so a slow network triggers the except block cleanly
-        async with httpx.AsyncClient(timeout=10.0) as client:
+        async with httpx.AsyncClient(timeout=10.0, verify=ssl_context) as client:
             response = await client.get(url)
             
             # Ensure we don't accidentally try to parse an HTML error page as JSON
@@ -124,7 +125,7 @@ async def get_universities():
     
 async def get_member_profile(token: str, identifier: str):
     """Fetches a specific user's public profile data."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=ssl_context) as client:
         response = await client.get(
             f"{api_url}/users/one?identifier={identifier}", # Assuming your router prefix is /users
             headers={"Authorization": f"Bearer {token}"}
@@ -136,7 +137,7 @@ async def verify_email_request(email: str, code: str):
     # Adjust your base URL if it is different
     payload = {"email": email, "code": code}
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=ssl_context) as client:
         try:
             response = await client.post(f"{api_url}/users/auth/verify-email", json=payload)
             return response.status_code, response.json()
@@ -147,7 +148,7 @@ async def send_password_reset_otp(email: str):
     # Adjust your base URL if it is different
     
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=ssl_context) as client:
         try:
             response = await client.post(f"{api_url}/users/auth/reset-password?email={email}")
             return response.status_code, response.json()
@@ -158,7 +159,7 @@ async def verify_password(email: str, new_password: str, otp: str):
     # Adjust your base URL if it is different
     payload = {"email": email, "new_password": new_password, "otp": otp}
     
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(verify=ssl_context) as client:
         try:
             response = await client.post(f"{api_url}/users/auth/verify-password?email={email}&otp={otp}&new_password={new_password}")
             return response.status_code, response.json()

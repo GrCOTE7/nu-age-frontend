@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 from typing import List, Dict, Any
 
 api_url = "https://api.nu-age.name.ng"
@@ -18,7 +19,7 @@ DEFAULT_TIMEOUT = httpx.Timeout(15.0)
 
 async def get_friends(token: str, skip: int = 0, limit: int = 50) -> List[Dict[str, Any]]:
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(
                 f"{api_url}/network/friends",
                 headers=_headers(token),
@@ -42,7 +43,7 @@ async def get_friends(token: str, skip: int = 0, limit: int = 50) -> List[Dict[s
 
 async def remove_friend(token: str, friend_id: str) -> Dict[str, Any]:
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.delete(
                 f"{api_url}/network/friends/{friend_id}",
                 headers=_headers(token)
@@ -65,7 +66,7 @@ async def remove_friend(token: str, friend_id: str) -> Dict[str, Any]:
 
 async def get_incoming_requests(token: str) -> List[Dict[str, Any]]:
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(
                 f"{api_url}/network/requests/incoming",
                 headers=_headers(token)
@@ -89,7 +90,7 @@ async def get_incoming_requests(token: str) -> List[Dict[str, Any]]:
 # NOTE: You will need to add this endpoint to your FastAPI router!
 async def get_sent_requests(token: str) -> List[Dict[str, Any]]:
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(
                 f"{api_url}/network/requests/sent",
                 headers=_headers(token)
@@ -113,7 +114,7 @@ async def get_sent_requests(token: str) -> List[Dict[str, Any]]:
 async def send_request(token: str, target_user_id: str) -> Dict[str, Any]:
     """Sends a friend request to a specific user."""
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(
                 f"{api_url}/network/requests/{target_user_id}",
                 headers=_headers(token)
@@ -132,7 +133,7 @@ async def send_request(token: str, target_user_id: str) -> Dict[str, Any]:
 
 async def accept_request(token: str, request_id: str) -> Dict[str, Any]:
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(
                 f"{api_url}/network/requests/{request_id}/accept",
                 headers=_headers(token)
@@ -151,7 +152,7 @@ async def accept_request(token: str, request_id: str) -> Dict[str, Any]:
 
 async def decline_request(token: str, request_id: str) -> Dict[str, Any]:
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.post(
                 f"{api_url}/network/requests/{request_id}/decline",
                 headers=_headers(token)
@@ -170,7 +171,7 @@ async def decline_request(token: str, request_id: str) -> Dict[str, Any]:
 
 async def cancel_outgoing_request(token: str, request_id: str) -> Dict[str, Any]:
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.delete(
                 f"{api_url}/network/requests/{request_id}/cancel",
                 headers=_headers(token)
@@ -194,7 +195,7 @@ async def cancel_outgoing_request(token: str, request_id: str) -> Dict[str, Any]
 async def get_discover_peers(token: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Fetches users from the same university."""
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(
                 f"{api_url}/network/discover/peers",
                 headers=_headers(token),
@@ -219,7 +220,7 @@ async def get_discover_peers(token: str, limit: int = 10) -> List[Dict[str, Any]
 async def get_discover_org(token: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Fetches users from the same organization."""
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(
                 f"{api_url}/network/discover/organization",
                 headers=_headers(token),
@@ -244,7 +245,7 @@ async def get_discover_org(token: str, limit: int = 10) -> List[Dict[str, Any]]:
 async def get_discover_trending(token: str, limit: int = 10) -> List[Dict[str, Any]]:
     """Fetches globally active/trending users."""
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(
                 f"{api_url}/network/discover/trending",
                 headers=_headers(token),

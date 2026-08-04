@@ -1,4 +1,5 @@
 import httpx
+from src.requests.net import ssl_context
 
 api_url = "https://api.nu-age.name.ng"
 
@@ -12,7 +13,7 @@ async def get_plans_config(token: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             return response.json()
@@ -31,7 +32,7 @@ async def get_subscription_status(token: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             return response.json()

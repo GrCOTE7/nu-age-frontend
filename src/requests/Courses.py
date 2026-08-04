@@ -1,5 +1,5 @@
 import httpx
-
+import asyncio
 api_url = "https://api.nu-age.name.ng"
 
 # Default timeout for standard JSON requests (matches the 15s "server waking up"
@@ -362,42 +362,114 @@ async def generate_course_certificate(token: str, course_id: str):
         return {"error": "Connection failed"}
 
 
-async def generate_course_draft(token: str, topic: str, context: str) -> dict:
-    """Hit the /courses/generate-draft endpoint and return the parsed draft dict."""
+async def start_course_draft_job(token: str, topic: str, context: str) -> dict:
+    """
+    Kicks off generation on the backend. Backend now returns 202 immediately
+    with a job_id instead of blocking on the full generation — this is a fast
+    call (should return in well under a second).
+    """
     url = f"{api_url}/courses/generate-draft"
     headers = {"Authorization": f"Bearer {token}"}
     payload = {"topic": topic, "context": context}
-
+ 
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:  # AI gen can be slow
+        async with httpx.AsyncClient(timeout=30.0) as client:  # fast call now, no AI wait here
             response = await client.post(url, headers=headers, json=payload)
-
-        if response.status_code == 200:
-            print("[AI] Draft generated successfully.")
-            return response.json()  # {"status": "success", "data": {...}}
-
+ 
+        if response.status_code == 202:
+            data = response.json()  # {"status": "queued", "job_id": "..."}
+            print(f"[AI] Job queued: {data.get('job_id')}")
+            return {"status": "queued", "job_id": data.get("job_id")}
+ 
         elif response.status_code == 403:
             print("[AI] Forbidden — user role not permitted.")
             return {"error": "forbidden"}
-
+ 
         elif response.status_code == 402:
             print("[AI] Plan gate — org not on a paid plan.")
             return {"error": "plan_required"}
-
+ 
         else:
-            print(f"[AI] Generation failed: {response.status_code}")
+            print(f"[AI] Failed to queue job: {response.status_code} — {response.text}")
             return {"error": "server_fail"}
-
+ 
     except httpx.TimeoutException:
-        print("[AI] Draft generation timed out.")
+        print("[AI] Job creation request timed out.")
         return {"error": "Connection failed"}
     except httpx.RequestError as ex:
         print(f"[AI] Connection error: {ex}")
         return {"error": "Connection failed"}
     except Exception as ex:
-        print(f"[AI] Unexpected exception: {ex}")
+        print(f"[AI] Unexpected exception starting job: {ex}")
         return {"error": "Connection failed"}
-
+ 
+ 
+async def poll_course_draft_job(
+    token: str,
+    job_id: str,
+    interval_seconds: float = 3.0,
+    max_wait_seconds: float = 600.0,
+) -> dict:
+    """
+    Polls the job status endpoint until SUCCESS, FAILED, or max_wait_seconds
+    is exceeded. Returns the same {"status": "success", "data": {...}} shape
+    the old single-call function returned, so callers barely change.
+    """
+    url = f"{api_url}/courses/generate-draft/{job_id}"
+    headers = {"Authorization": f"Bearer {token}"}
+    elapsed = 0.0
+ 
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        while elapsed < max_wait_seconds:
+            try:
+                response = await client.get(url, headers=headers)
+ 
+                if response.status_code == 404:
+                    print(f"[AI] Job {job_id} not found.")
+                    return {"error": "server_fail"}
+ 
+                if response.status_code != 200:
+                    print(f"[AI] Poll failed: {response.status_code} — {response.text}")
+                    return {"error": "server_fail"}
+ 
+                data = response.json()
+                job_status = data.get("status")
+ 
+                if job_status == "SUCCESS":
+                    print(f"[AI] Job {job_id} completed.")
+                    return {"status": "success", "data": data.get("data", {})}
+ 
+                if job_status == "FAILED":
+                    print(f"[AI] Job {job_id} failed: {data.get('detail')}")
+                    return {"error": "generation_failed", "detail": data.get("detail")}
+ 
+                # PENDING or RUNNING — keep waiting
+                await asyncio.sleep(interval_seconds)
+                elapsed += interval_seconds
+ 
+            except httpx.RequestError as ex:
+                print(f"[AI] Poll connection error: {ex}")
+                return {"error": "Connection failed"}
+ 
+    print(f"[AI] Job {job_id} exceeded max wait of {max_wait_seconds}s.")
+    return {"error": "timeout"}
+ 
+ 
+async def generate_course_draft(token: str, topic: str, context: str) -> dict:
+    """
+    Drop-in replacement for the old single-call version — same signature,
+    same return shape. Internally: start job, then poll until done.
+    """
+    start_result = await start_course_draft_job(token, topic, context)
+ 
+    if "error" in start_result:
+        return start_result
+ 
+    job_id = start_result.get("job_id")
+    if not job_id:
+        return {"error": "server_fail"}
+ 
+    return await poll_course_draft_job(token, job_id)
 
 async def get_completion_stats(token: str, course_id: str, params: dict | None = None):
     url = f"{api_url}/courses/{course_id}/completion-stats"

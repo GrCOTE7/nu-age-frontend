@@ -67,8 +67,19 @@ async def get_organisation_members(token: str, id: str, students: bool = False, 
         return {"error": str(e)}
 
 
-async def get_organisation_courses(token: str, id: str):
+async def get_organisation_courses(
+    token: str,
+    id: str,
+    teacher_id: str | None = None,
+    is_freelance: bool | None = None,
+):
     url = f"{api_url}/organisations/courses?id={id}"
+    if teacher_id is not None:
+        url += f"&teacher_id={teacher_id}"
+    if is_freelance is not None:
+        # FastAPI's bool Query parser accepts "true"/"false" (case-insensitive)
+        url += f"&is_freelance={'true' if is_freelance else 'false'}"
+
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
@@ -222,3 +233,28 @@ async def get_joined_organisations(token: str) -> list:
     except Exception as e:
         print(f"get_joined_organisations request error: {e}")
         return []
+
+    ("/{course_id}/enrollments/org-students")
+
+async def get_enrolled_org_students(token: str, course_id: str, params: dict | None = None):
+    url = f"{api_url}/{course_id}/enrollments/org-students"
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+            response = await client.get(url, headers=headers, params=params)
+            if response.status_code == 200:
+                return response.json()
+            elif response.status_code == 401:
+                print("Unauthorized access. Please log in again.")
+                return {"error": "unauthorized"}
+            else:
+                return {"error": "server_fail"}
+    except httpx.TimeoutException:
+        print("get_enrolled_students timed out.")
+        return {"error": "Connection failed"}
+    except httpx.RequestError as e:
+        print(f"Request Error: {e}")
+        return {"error": "Connection failed"}
+    except Exception as e:
+        print(f"Unexpected Error: {e}")
+        return {"error": "Connection failed"}

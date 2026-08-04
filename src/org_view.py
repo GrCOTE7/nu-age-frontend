@@ -11,6 +11,12 @@ from src.requests.organisations import (
     get_organisation_courses,
 )
 
+# The shared "Nu Age" account every freelance course is filed under.
+# /courses now scopes TEACHER-role requests against this org_id down to
+# teacher_id == the calling user server-side, so fetching "the org's courses"
+# here naturally returns only this teacher's own freelance courses.
+DEFAULT_ORG_ID = "584b537e-6521-4852-a7e4-18f6c095126d"
+
 
 # ── shared field style ────────────────────────────────────────────────────────
 _INPUT = {
@@ -862,8 +868,12 @@ async def organisations_view(page: ft.Page):
             # Fetch courses if not cached  ── REAL ──
             if org_id not in org_courses_cache:
                 try:
+                    # is_freelance=False: this is the teacher's genuine "My Orgs"
+                    # view — even when org_id happens to be DEFAULT_ORG_ID (a
+                    # teacher who's a real Nu Age staff member, not a freelancer),
+                    # this must NOT pull in the freelance pool's courses.
                     courses = await asyncio.wait_for(
-                        get_organisation_courses(token, org_id), timeout=15
+                        get_organisation_courses(token, org_id, is_freelance=False), timeout=15
                     )
                     org_courses_cache[org_id] = courses or []
                 except Exception as ex:
@@ -1190,8 +1200,124 @@ async def organisations_view(page: ft.Page):
         # ─────────────────────────────────────────────────────────────────────
         # Tab 2 — Freelance Course Library
         # ─────────────────────────────────────────────────────────────────────
-        # 🟡 MOCK: No freelance courses API yet — shows empty state + CTA that
-        #          navigates to the real /create-course route.
+        # ✅ REAL: fetches this teacher's freelance courses. The backend scopes
+        #    TEACHER-role requests against DEFAULT_ORG_ID to teacher_id == the
+        #    calling user, so this list is automatically "just theirs" — no
+        #    client-side filtering needed, and there's no way to see other
+        #    freelancers' courses even by tampering with the request.
+        try:
+            freelance_courses = await asyncio.wait_for(
+                get_organisation_courses(token, DEFAULT_ORG_ID, is_freelance=True), timeout=15
+            )
+            freelance_courses = freelance_courses or []
+        except Exception as ex:
+            print(f"[teacher_view] freelance courses fetch failed: {ex}")
+            freelance_courses = []
+
+        def freelance_course_card(course: dict):
+            title    = course.get("name", "Untitled Course")
+            enrolled = course.get("total_students", 0)
+            public   = course.get("public", False)
+            cid      = course.get("id", "")
+            status_bg  = ft.Colors.GREEN_50 if public else ft.Colors.GREY_100
+            status_fg  = ft.Colors.GREEN_700 if public else ft.Colors.GREY_600
+            status_lbl = "Published" if public else "Draft"
+
+            return ft.Container(
+                bgcolor=ft.Colors.SURFACE,
+                border_radius=12,
+                border=ft.Border.all(1, ft.Colors.GREY_200),
+                padding=ft.Padding.symmetric(horizontal=14, vertical=12),
+                margin=ft.Margin.only(bottom=8),
+                ink=True,
+                on_click=lambda e, cid=cid: page.go(f"/courses/{cid}/manage"),
+                content=ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    controls=[
+                        ft.Column(
+                            spacing=2, expand=True,
+                            controls=[
+                                ft.Text(title, size=13, weight=ft.FontWeight.W_600, color=ft.Colors.ON_SURFACE),
+                                ft.Text(f"{enrolled} student{'s' if enrolled != 1 else ''}", size=11, color=ft.Colors.GREY_500),
+                            ],
+                        ),
+                        ft.Row(
+                            spacing=8,
+                            controls=[
+                                ft.Container(
+                                    padding=ft.Padding.symmetric(horizontal=9, vertical=3),
+                                    bgcolor=status_bg, border_radius=10,
+                                    content=ft.Text(status_lbl, size=10, color=status_fg, weight=ft.FontWeight.W_600),
+                                ),
+                                ft.IconButton(
+                                    ft.Icons.BAR_CHART_ROUNDED, icon_size=16, icon_color=ft.Colors.GREY_400,
+                                    tooltip="Analytics",
+                                    on_click=lambda e, cid=cid: page.go(
+                                        f"/organisations/{DEFAULT_ORG_ID}/courses/{cid}/analytics"
+                                    ),
+                                ),
+                            ],
+                        ),
+                    ],
+                ),
+            )
+
+        freelance_list_content = (
+            ft.Column(
+                spacing=0,
+                controls=[freelance_course_card(c) for c in freelance_courses],
+            )
+            if freelance_courses else
+            # Empty state — shown only when this teacher genuinely has no
+            # freelance courses yet.
+            ft.Column(
+                    expand=True,
+                    alignment=ft.MainAxisAlignment.CENTER,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Container(
+                            width=80, height=80,
+                            bgcolor=ft.Colors.PRIMARY_CONTAINER,
+                            border_radius=40,
+                            alignment=ft.Alignment.CENTER,
+                            content=ft.Icon(
+                                ft.Icons.MIC_EXTERNAL_ON_ROUNDED,
+                                size=38, color=ft.Colors.PRIMARY,
+                            ),
+                        ),
+                        ft.Container(height=16),
+                        ft.Text(
+                            "No freelance courses yet",
+                            size=16, weight=ft.FontWeight.W_600,
+                            color=ft.Colors.ON_SURFACE,
+                        ),
+                        ft.Container(height=6),
+                        ft.Text(
+                            "Publish a course independently — no organisation needed.",
+                            size=12, color=ft.Colors.GREY_500,
+                            text_align=ft.TextAlign.CENTER,
+                        ),
+                        ft.Container(height=24),
+                        ft.OutlinedButton(
+                            content=ft.Row(
+                                tight=True,
+                                spacing=6,
+                                controls=[
+                                    ft.Icon(ft.Icons.ADD_ROUNDED, size=16, color=ft.Colors.PRIMARY),
+                                    ft.Text("Create Your First Course", size=13, color=ft.Colors.PRIMARY, weight=ft.FontWeight.W_600),
+                                ],
+                            ),
+                            style=ft.ButtonStyle(
+                                shape=ft.RoundedRectangleBorder(radius=10),
+                                side=ft.BorderSide(1.5, ft.Colors.PRIMARY),
+                            ),
+                            height=44,
+                            on_click=lambda _: page.go("/create-course"),
+                        ),
+                    ],
+                )
+        )
+
         freelance_content = ft.Container(
             expand=True,
             padding=ft.Padding.symmetric(horizontal=16, vertical=16),
@@ -1237,53 +1363,7 @@ async def organisations_view(page: ft.Page):
                         ],
                     ),
                     ft.Divider(height=20, color=ft.Colors.GREY_100),
-                    # Empty state — will be replaced when freelance course API is live
-                    ft.Column(
-                            expand=True,
-                            alignment=ft.MainAxisAlignment.CENTER,
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            controls=[
-                                ft.Container(
-                                    width=80, height=80,
-                                    bgcolor=ft.Colors.PRIMARY_CONTAINER,
-                                    border_radius=40,
-                                    alignment=ft.Alignment.CENTER,
-                                    content=ft.Icon(
-                                        ft.Icons.MIC_EXTERNAL_ON_ROUNDED,
-                                        size=38, color=ft.Colors.PRIMARY,
-                                    ),
-                                ),
-                                ft.Container(height=16),
-                                ft.Text(
-                                    "No freelance courses yet",
-                                    size=16, weight=ft.FontWeight.W_600,
-                                    color=ft.Colors.ON_SURFACE,
-                                ),
-                                ft.Container(height=6),
-                                ft.Text(
-                                    "Publish a course independently — no organisation needed.",
-                                    size=12, color=ft.Colors.GREY_500,
-                                    text_align=ft.TextAlign.CENTER,
-                                ),
-                                ft.Container(height=24),
-                                ft.OutlinedButton(
-                                    content=ft.Row(
-                                        tight=True,
-                                        spacing=6,
-                                        controls=[
-                                            ft.Icon(ft.Icons.ADD_ROUNDED, size=16, color=ft.Colors.PRIMARY),
-                                            ft.Text("Create Your First Course", size=13, color=ft.Colors.PRIMARY, weight=ft.FontWeight.W_600),
-                                        ],
-                                    ),
-                                    style=ft.ButtonStyle(
-                                        shape=ft.RoundedRectangleBorder(radius=10),
-                                        side=ft.BorderSide(1.5, ft.Colors.PRIMARY),
-                                    ),
-                                    height=44,
-                                    on_click=lambda _: page.go("/create-course"),
-                                ),
-                            ],
-                        ),
+                    freelance_list_content,
                 ],
             ),
         )

@@ -3,8 +3,18 @@ import base64
 
 import flet as ft
 from src.components.bottom_appbar import get_bottom_appbar
-from src.requests.Courses import create_course, get_categories, get_courses
-from src.requests.organisations import get_my_organisation, get_organisation_members
+from src.requests.Courses import create_course, get_categories
+from src.requests.organisations import (
+    get_my_organisation,
+    get_organisation_members,
+    get_organisation_courses,
+)
+
+# The shared "Nu Age" account that every freelance course is filed under.
+# The /courses endpoint now scopes TEACHER-role requests against this org_id
+# to teacher_id == the calling user automatically (see backend), so we don't
+# need to do any client-side filtering here — just point at the right org_id.
+DEFAULT_ORG_ID = "584b537e-6521-4852-a7e4-18f6c095126d"
 
 
 # ── shared field style ────────────────────────────────────────────────────────
@@ -27,6 +37,15 @@ def _section_label(text: str) -> ft.Text:
 async def create_courses_view(page: ft.Page, org_id: str = None):
     app_bar = get_bottom_appbar(page)
     token   = await page.shared_preferences.get("auth_token")
+
+    user_data     = page.session.store.get("current_user") or {}
+    current_user_id = user_data.get("id")
+
+    # Freelance = no real org passed in, or explicitly pointed at the shared
+    # Nu Age account. Either way, this teacher only gets to see/manage/build/
+    # analyze their OWN courses, never the rest of that org's library.
+    is_freelance = (not org_id) or (org_id == DEFAULT_ORG_ID)
+    effective_org_id = org_id or DEFAULT_ORG_ID
 
     # ── view-level state ──────────────────────────────────────────────────────
     categories_options: list = []
@@ -58,7 +77,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
         course_id   = course.get("id", "")
         is_public   = course.get("public",      False)
         is_supervised = course.get("supervised", False)
-        students    = len(course.get("Students", []))
+        students    = course.get("total_students", 0)
 
         # ── badges ────────────────────────────────────────────────────────────
         def pill(label, bg, fg):
@@ -120,7 +139,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                 side=ft.BorderSide(1, theme_color),
                 padding=ft.Padding.symmetric(vertical=0, horizontal=8),
             ),
-            on_click=lambda e, oid=org_id, cid=course_id: page.go(
+            on_click=lambda e, oid=effective_org_id, cid=course_id: page.go(
     f"/organisations/{oid}/courses/{cid}/analytics"
 ),
         )
@@ -131,7 +150,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
             icon_size=16,
             icon_color=ft.Colors.GREY_400,
             tooltip="Course Settings",
-            on_click=lambda e, oid=org_id, cid=course_id: page.go(f"/organisations/{oid}/courses/{cid}/settings"),
+            on_click=lambda e, oid=effective_org_id, cid=course_id: page.go(f"/organisations/{oid}/courses/{cid}/settings"),
         )
 
         return ft.Container(
@@ -263,12 +282,16 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
             focused_border_color=ft.Colors.PRIMARY,
             border_radius=10,
         )
+        # Freelance courses have exactly one possible teacher: whoever is
+        # creating it. No dropdown needed, and no one else should be
+        # assignable — hide it entirely rather than just disabling it.
         teacher_dropdown = ft.Dropdown(
             label="Assign Teacher (Optional)",
             options=teachers_options,
             border_color=ft.Colors.GREY_300,
             focused_border_color=ft.Colors.PRIMARY,
             border_radius=10,
+            visible=not is_freelance,
         )
 
         # ── objectives ────────────────────────────────────────────────────────
@@ -393,8 +416,11 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                     "objectives":     objectives_list,
                     "image_bytes":    logo_b64,
                     "image_filename": selected_logo_name,
-                    "org_id":         org_id,
-                    "teacher_id":     teacher_dropdown.value or None,
+                    "org_id":         effective_org_id,
+                    "is_freelance":   is_freelance,
+                    # Freelance: always the current user, ignore/hide the picker.
+                    # Org context: whoever the admin picked (or None = unassigned).
+                    "teacher_id":     current_user_id if is_freelance else (teacher_dropdown.value or None),
                 }
 
                 new_course = await asyncio.wait_for(
@@ -567,13 +593,26 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
         nonlocal categories_options, theme_color, current_courses, teachers_options
 
         try:
-            categories, teachers, org_data, courses = await asyncio.gather(
-                asyncio.wait_for(get_categories(token, None),                                   timeout=15),
-                asyncio.wait_for(get_organisation_members(token, id=org_id, teachers=True),     timeout=15),
-                asyncio.wait_for(get_my_organisation(token),                                    timeout=15),
-                asyncio.wait_for(get_courses(token, params={"org": org_id}),                    timeout=15),
-                return_exceptions=True,
-            )
+            # Freelance: skip the org member/teacher lookup entirely (there's no
+            # "team" to assign to — see teacher_dropdown hidden above) and skip
+            # get_my_organisation (this person doesn't administer the shared
+            # Nu Age org). Course fetch goes through get_organisation_courses
+            # so the backend's teacher_id scoping kicks in automatically.
+            if is_freelance:
+                categories, courses = await asyncio.gather(
+                    asyncio.wait_for(get_categories(token, None),                                          timeout=15),
+                    asyncio.wait_for(get_organisation_courses(token, effective_org_id, is_freelance=True),  timeout=15),
+                    return_exceptions=True,
+                )
+                teachers, org_data = [], {}
+            else:
+                categories, teachers, org_data, courses = await asyncio.gather(
+                    asyncio.wait_for(get_categories(token, None),                                            timeout=15),
+                    asyncio.wait_for(get_organisation_members(token, id=org_id, teachers=True),               timeout=15),
+                    asyncio.wait_for(get_my_organisation(token),                                              timeout=15),
+                    asyncio.wait_for(get_organisation_courses(token, effective_org_id, is_freelance=False),   timeout=15),
+                    return_exceptions=True,
+                )
 
             # categories
             if isinstance(categories, list):
@@ -645,7 +684,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
     # VIEW
     # ─────────────────────────────────────────────────────────────────────────
     return ft.View(
-        route=f"/organisations/{org_id}/courses" if org_id else "/courses",
+        route=f"/organisations/{org_id}/courses" if org_id else "/create-course",
         bottom_appbar=app_bar,
         bgcolor=ft.Colors.SURFACE_CONTAINER,
         padding=0,

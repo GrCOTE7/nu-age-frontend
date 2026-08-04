@@ -122,7 +122,7 @@ def login_view(page: ft.Page):
 
         is_processing   = True
         Submit.disabled = True
-        Submit.text     = "Signing in…"
+        Submit.content = ft.ProgressRing(width=16, height=16, color=ft.Colors.ON_PRIMARY)
         clear_error()
         page.update()
 
@@ -131,7 +131,7 @@ def login_view(page: ft.Page):
                 login_request(email.value, password.value),
                 timeout=15,
             )
-
+            Submit.content = ft.Text("Sign in")
             if status == 200:
                 token = data.get("access_token")
                 await page.shared_preferences.set("auth_token", token)
@@ -528,9 +528,22 @@ def login_view(page: ft.Page):
 
     # ── page layout ───────────────────────────────────────────────
     def get_view_padding():
+        # BUG FIX: page.width can be None on a genuinely cold load — the
+        # client reports its viewport size asynchronously after
+        # connecting, and this view can be built before that value has
+        # arrived. `None < 600` raises TypeError, which (depending on
+        # exactly when this runs) can crash view construction with no
+        # visible error, or leave a fallback "something went wrong"
+        # screen in place of login instead of login itself — matching
+        # the "blank on first load, fixed by reload" symptom, since a
+        # reload happens after the client has already reported its size
+        # once, so page.width is populated by then. Treat an unknown
+        # width as desktop-sized (the safer default) rather than
+        # crashing or assuming mobile.
+        width = page.width or 600
         return (
             ft.Padding.symmetric(vertical=80, horizontal=16)
-            if page.width < 600
+            if width < 600
             else ft.Padding.symmetric(vertical=10, horizontal=16)
         )
 
@@ -542,6 +555,12 @@ def login_view(page: ft.Page):
         horizontal_alignment=ft.CrossAxisAlignment.CENTER,
         appbar=get_landing_appbar(page)
     )
+    # BUG FIX: get_view_padding() was defined but never actually called
+    # to set the initial view.padding — it was only wired up via
+    # on_resize below, so the view rendered with no padding at all until
+    # the first resize event fired (which may never fire on some
+    # platforms/desktop windows that don't resize after load).
+    view.padding = get_view_padding()
 
     def on_page_resize(e):
         view.padding = get_view_padding()

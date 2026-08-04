@@ -1374,7 +1374,18 @@ async def main(page: ft.Page):
 
             if not token:
                 shimmer_task.cancel()
-                page.views.pop()
+                # Pop the skeleton, but NEVER leave page.views empty here.
+                # If this is the very first route of the session (cold
+                # open straight into a protected route), page.views was
+                # empty before the skeleton was pushed, so popping it
+                # leaves nothing for the dialog to render on top of —
+                # that's the "white screen after the shimmer" bug. Always
+                # ensure a real view (login) is underneath the dialog.
+                if page.views and page.views[-1] is skel:
+                    page.views.pop()
+                if not page.views:
+                    page.views.append(login_view(page))
+                    page.update()
                 await show_session_expired_dialog(
                     "Please log in to continue.",
                     auto_redirect_seconds=3,
@@ -1402,7 +1413,19 @@ async def main(page: ft.Page):
             elif status in (401, 403):
                 # Genuinely expired/invalid token — safe to clear it.
                 shimmer_task.cancel()
-                page.views.pop()
+                # Same fix as the "no token" branch above: don't leave
+                # page.views empty before showing the dialog. On a cold
+                # open into a protected route (e.g. reopening the app
+                # after the token expired), page.views was empty before
+                # the skeleton was pushed, so popping it here leaves the
+                # dialog with nothing to render on top of — that's the
+                # white-screen-after-shimmer bug. Always land on a real
+                # login view underneath the dialog.
+                if page.views and page.views[-1] is skel:
+                    page.views.pop()
+                if not page.views:
+                    page.views.append(login_view(page))
+                    page.update()
                 await page.shared_preferences.remove("auth_token")
                 await show_session_expired_dialog(
                     "Your session has ended. Please log in again to continue."
@@ -1470,6 +1493,8 @@ async def main(page: ft.Page):
             await load_view_and_report(profile_view(page), page.route, active_skeleton, active_shimmer_task)
         elif page.route == "/courses":
             await load_view_and_report(courses_view(page), page.route, active_skeleton, active_shimmer_task)
+        elif page.route == "/create-course":
+            await load_view_and_report(create_courses_view(page, None), page.route, active_skeleton, active_shimmer_task)
         elif page.route == "/edit-profile":
             await load_view_and_report(edit_profile_view(page), page.route, active_skeleton, active_shimmer_task)
         elif page.route == "/organisations":
@@ -1577,16 +1602,65 @@ async def main(page: ft.Page):
 
     page.on_route_change = route_change
 
-    # --- THE FIX ---
+    # --- BUG FIX: intermittent white screen on FIRST load (distinct from
+    # the token-expiry bug above — this can happen regardless of whether
+    # a token exists, and a manual reload always "fixes" it) ---
+    #
+    # On a genuinely cold load, `main()` can start running before the
+    # client's own connection/transport has fully finished handshaking.
+    # `page.shared_preferences.get(...)` is a platform-channel RPC to the
+    # client — if it's issued while that handshake is still settling, it
+    # can raise, hang, or return an unusable result. Since the block below
+    # was previously unguarded, any of those outcomes could leave
+    # `page.route` unset and skip `route_change` doing anything useful —
+    # nothing throws loudly, nothing gets logged, and the session just
+    # sits there blank until a reload gives the client more time before
+    # we touch it again.
+    #
+    # Fix: guard the shared_preferences read so a slow/unready client
+    # fails safe into the public login route instead of silently
+    # producing no view at all, and (belt-and-suspenders, below) verify
+    # something actually landed in page.views afterwards.
+
     # Previously this unconditionally overwrote page.route with "/dashboard"
     # or "/", which destroyed real deep links (e.g. /accept-invite/<uuid>
     # from an email) before route_change ever saw them. Now we only apply
     # that default when there's no real route to honor (fresh load with no
     # path, or bare "/").
     if not page.route or page.route == "/":
-        page.route = "/dashboard" if await page.shared_preferences.get("auth_token") else "/"
+        try:
+            # Bounded wait, not just a try/except — an unready platform
+            # channel can hang rather than raise, and an unguarded await
+            # here would block bootstrap forever with no fallback at all.
+            has_token = await asyncio.wait_for(
+                page.shared_preferences.get("auth_token"), timeout=5
+            )
+        except Exception as ex:
+            # Covers both raised errors and the timeout above. If
+            # shared_preferences genuinely isn't ready/available yet,
+            # don't let that stall or crash session bootstrap and leave
+            # a blank screen with no recovery — fail safe to the public
+            # login route, which route_change can always render.
+            print(f"initial shared_preferences read failed: {ex!r}")
+            has_token = None
+        page.route = "/dashboard" if has_token else "/"
 
     await route_change(None)
+    # Belt-and-suspenders: if for any reason the manual call above didn't
+    # result in anything being pushed to page.views (e.g. it silently
+    # no-opped during a still-settling connection), make sure the user
+    # never lands on a truly empty screen with nothing to look at or
+    # recover from. Guarded with try/except since this runs outside
+    # route_change's own try/except — an unhandled exception here (e.g.
+    # a view constructor hitting another None-dependent property before
+    # the client has fully reported in) would otherwise crash bootstrap
+    # itself instead of just failing to show a view.
+    if not page.views:
+        try:
+            page.views.append(login_view(page))
+            page.update()
+        except Exception as ex:
+            print(f"fallback login_view construction failed: {ex!r}")
 
 
 ft.run(main, assets_dir="assets")

@@ -3,8 +3,8 @@ import flet as ft
 from src.components.bottom_appbar import get_bottom_appbar
 from src.requests.Courses import get_categories, get_courses, update_course_settings, delete_course
 from src.requests.organisations import get_organisation_members
-from src.requests.enrollments import bulk_enrol_students, bulk_unenrol_students, get_enrolled_students
-
+from src.requests.enrollments import bulk_enrol_students, bulk_unenrol_students
+from src.requests.organisations import get_enrolled_org_students
 
 # =========================================================
 # SECTION 1: CONSTANTS
@@ -45,7 +45,6 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
     async def _get_teachers() -> list:
         try:
             result = await get_organisation_members(token, id=org_id, teachers=True)
-            print(result)
             return result or []
         except Exception as ex:
             _log_error("get_teachers", ex)
@@ -446,9 +445,10 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
 
         async def fetch_and_populate():
             try:
-                students = await get_enrolled_students(token, course_id, params={})
+                students = await get_enrolled_org_students(token, course_id, params={})
+                print(students)
             except Exception as ex:
-                _log_error("get_enrolled_students", ex)
+                _log_error("get_enrolled_org_students", ex)
                 students = None
             
             loading_ring.visible = False
@@ -487,7 +487,7 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
                                     expand=True,
                                     spacing=2,
                                     controls=[
-                                        ft.Text(f'{student.get("first_name", "Unknown")} {student.get("last_name", "Unknown")}', size=14,
+                                        ft.Text(f'{student.get("name", "Unknown")}', size=14,
                                                 weight=ft.FontWeight.W_600,
                                                 color=ft.Colors.ON_SURFACE),
                                         ft.Text(student.get("email", "—"), size=12,

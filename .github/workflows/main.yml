@@ -137,6 +137,24 @@ jobs:
             exit 1
           fi
 
+      - name: Dump generated Gradle signing config (diagnostic)
+        run: |
+          # We've been guessing at how Flet wires FLET_ANDROID_SIGNING_KEY_STORE
+          # into the generated Gradle file across a few failed attempts. This
+          # prints the real generated file so the next fix is based on what
+          # Flet actually wrote, not on reading flet-cli source in isolation.
+          GRADLE_FILE=$(find build -name "build.gradle.kts" -path "*app*" | head -n 1)
+          echo "Found: $GRADLE_FILE"
+          if [ -n "$GRADLE_FILE" ]; then
+            echo "--- signingConfigs / buildTypes section ---"
+            grep -n -A 15 "signingConfigs\|buildTypes" "$GRADLE_FILE" || echo "(no signingConfigs/buildTypes block found at all)"
+            echo "--- full file, for reference ---"
+            cat "$GRADLE_FILE"
+          else
+            echo "::warning::No build.gradle.kts found under build/ - Flet may use a different output path in this version."
+            find build -iname "*.gradle*" 2>/dev/null
+          fi
+
       - name: Verify APK is signed
         run: |
           # Belt-and-suspenders: fail the job explicitly if an unsigned APK

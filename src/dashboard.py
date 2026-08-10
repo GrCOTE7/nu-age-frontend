@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import flet as ft
 import flet_charts as fch  # pyright: ignore[reportMissingImports]
 
+from src.components import bottom_appbar
 from src.components.bottom_appbar import get_bottom_appbar
 from src.components.dashboard_card import get_continue_learning_card
 from src.requests.enrollments import get_enrollments
@@ -34,10 +35,426 @@ def _card(content, padding=18) -> ft.Container:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# ONBOARDING — first-login welcome carousel
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Edit this list to change the slides — nothing else needs to change.
+# Set a slide's "image" to a real screenshot/illustration path or URL to
+# replace the icon placeholder; leave it unset to keep the icon.
+ONBOARDING_SLIDES = [
+    {
+        "eyebrow": "Your library",
+        "accent": ft.Colors.PRIMARY,
+        "icon_bg": ft.Colors.INDIGO_100,
+        "icon": ft.Icons.LIBRARY_BOOKS_ROUNDED,
+        "image": "coureses.png",  # e.g. "/assets/onboarding/courses.png"
+        "title": "Everything you're learning,\nin one place",
+        "body": "Jump back into any course, track chapters you've finished, "
+                "and pick up exactly where you left off.",
+    },
+    {
+        "eyebrow": "Study together",
+        "accent": ft.Colors.TEAL_600,
+        "icon_bg": ft.Colors.TEAL_100,
+        "icon": ft.Icons.PEOPLE_ALT_ROUNDED,
+        "image": "nu chat 3.png",  # e.g. "/assets/onboarding/network.png"
+        "title": "Learn alongside people,\nnot alone",
+        "body": "Add classmates, see what they're studying, and keep each "
+                "other moving forward.",
+    },
+    {
+        "eyebrow": "AI - Working for You",
+        "accent": ft.Colors.AMBER_700,
+        "icon_bg": ft.Colors.AMBER_100,
+        "icon": ft.Icons.BAR_CHART_ROUNDED,
+        "image": "cards.png",  # e.g. "/assets/onboarding/activity.png"
+        "title": "Learn\nBut Smarter",
+        "body": "Learn. Test. Repeat. Engage your own AI Tutor in the Self-Study Hub",
+    },
+    {
+        "eyebrow": "....And Lots More",
+        "accent": ft.Colors.INDIGO_700,
+        "icon_bg": ft.Colors.INDIGO_100,
+        "icon": ft.Icons.PLAY_CIRCLE_ROUNDED,
+        "image": "icon.png",  # e.g. "/assets/onboarding/continue.png"
+        "title": "Pick up right\nwhere you left off",
+        "body": "Your dashboard remembers your last lesson so you never "
+                "lose your place.",
+    },
+]
+
+ONBOARDING_AUTO_SECONDS = 4.5
+
+# DEV MOCK TOGGLE ------------------------------------------------------------
+# Force-show or force-hide the onboarding overlay for testing, bypassing the
+# real/mock first-login check below.
+#   True  -> always show it (handy while designing/testing)
+#   False -> never show it
+#   None  -> use check_is_first_login()'s result (the "real" behavior)
+FORCE_SHOW_ONBOARDING = None
+
+
+async def check_is_first_login(page: ft.Page) -> bool:
+    """MOCK — swap this out for the real check.
+
+    e.g. read a `has_seen_onboarding` flag off the user record returned by
+    your auth/user API, instead of a local device flag.
+    """
+    user_data  = page.session.store.get("current_user") 
+    streak = user_data.get("streak", 0)
+    seen = streak >2
+    return not seen
+
+
+async def mark_onboarding_seen(page: ft.Page) -> None:
+    """MOCK — swap this out for the real write (API call, DB update, etc.)."""
+    await page.shared_preferences.set("has_seen_onboarding", True)
+
+
+def build_onboarding_overlay(page: ft.Page, on_dismiss) -> ft.Container:
+    """Auto-sliding welcome carousel meant to sit on top of the dashboard
+    on first login. Calls `on_dismiss()` once the user skips or finishes.
+    """
+    state = {"index": 0, "auto_task": None, "dismissed": False}
+    n_slides = len(ONBOARDING_SLIDES)
+
+    # ── adaptive sizing ────────────────────────────────────────────────
+    # Card is capped at 440px so it doesn't stretch absurdly wide on
+    # desktop/tablet, but shrinks to fit narrow phone screens with margin.
+    CARD_MAX_WIDTH = 800
+    CARD_MIN_WIDTH = 280
+    CARD_H_PADDING = 30      # matches padding.left/right
+
+    CARD_MAX_HEIGHT = 565  # ceiling: don't let it stretch into a full page on tall/desktop windows
+    CARD_MIN_HEIGHT = 420    # floor: enough room for title + progress row + body without clipping
+    CARD_V_PADDING = 48      # top/bottom safe margin (status bar, nav, window chrome)
+
+    CARD_SPACING = 6
+
+    def card_width() -> float:
+        w = page.width or 390
+        return max(CARD_MIN_WIDTH, min(CARD_MAX_WIDTH, w - CARD_H_PADDING))
+
+    def card_height() -> float:
+        h = page.height or 550
+        return max(CARD_MIN_HEIGHT, min(CARD_MAX_HEIGHT, h - CARD_V_PADDING))
+
+    def segment_width() -> float:
+        content_w = card_width() - (CARD_H_PADDING * 2)
+        spacing_total = CARD_SPACING * (n_slides - 1)
+        return max(0.0, (content_w - spacing_total) / n_slides)
+
+    # ── progress segments — a track + a single fill Container. We only
+    # ever set a *target* width and let Flet/Flutter animate the change
+    # itself (one smooth transition), instead of us stepping the value
+    # in a loop, which is what caused the jerky/irregular fill before.
+    fills = []
+    segments = []
+    for _ in ONBOARDING_SLIDES:
+        fill = ft.Container(height=4, border_radius=3, bgcolor=ft.Colors.PRIMARY, width=0)
+        track = ft.Container(
+            expand=True, height=4, border_radius=3,
+            bgcolor=ft.Colors.with_opacity(0.12, ft.Colors.ON_SURFACE),
+            alignment=ft.Alignment.CENTER_LEFT,
+            content=fill,
+        )
+        fills.append(fill)
+        segments.append(track)
+    progress_row = ft.Row(spacing=CARD_SPACING, controls=segments)
+
+    def set_progress_static():
+        w = segment_width()
+        for i, fill in enumerate(fills):
+            fill.animate = None
+            fill.width = w if i < state["index"] else 0
+
+    # ── dots ─────────────────────────────────────────────────────────────
+    def handle_dot_tap(i):
+        def handler(e):
+            go_to(i)
+        return handler
+
+    dots = []
+    for i in range(n_slides):
+        dots.append(
+            ft.Container(
+                width=7, height=7, border_radius=4,
+                bgcolor=ft.Colors.with_opacity(0.15, ft.Colors.ON_SURFACE),
+                animate=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
+                ink=True,
+                on_click=handle_dot_tap(i),
+            )
+        )
+    dots_row = ft.Row(spacing=7, controls=dots)
+
+    def refresh_dots():
+        for i, d in enumerate(dots):
+            active = i == state["index"]
+            d.width = 20 if active else 7
+            d.bgcolor = ft.Colors.PRIMARY if active else ft.Colors.with_opacity(
+                0.15, ft.Colors.ON_SURFACE
+            )
+
+    # ── slide content ───────────────────────────────────────────────────
+    def build_slide_content(i):
+        slide = ONBOARDING_SLIDES[i]
+        if slide.get("image"):
+            art = ft.Container(
+                height=190, alignment=ft.Alignment.CENTER,
+                content=ft.Image(
+                    src=slide["image"], height=float("inf"), width=float("inf"),
+                    fit=ft.BoxFit.FIT_WIDTH, border_radius=16,
+                ),
+            )
+        else:
+            art = ft.Container(
+                height=210, alignment=ft.Alignment.CENTER,
+                content=ft.Container(
+                    width=130, height=130, border_radius=65,
+                    bgcolor=slide["icon_bg"],
+                    alignment=ft.Alignment.CENTER,
+                    content=ft.Icon(slide["icon"], size=54, color=slide["accent"]),
+                ),
+            )
+        return ft.Column(
+            key=str(i),
+            spacing=10,
+            controls=[
+                art,
+                ft.Text(slide["eyebrow"], size=11.5, weight=ft.FontWeight.W_700,
+                         color=slide["accent"]),
+                ft.Text(slide["title"], size=21, weight=ft.FontWeight.W_800,
+                         color=ft.Colors.ON_SURFACE),
+                ft.Text(slide["body"], size=13.5, color=ft.Colors.GREY_500),
+            ],
+        )
+
+    slide_switcher = ft.AnimatedSwitcher(
+        content=build_slide_content(0),
+        transition=ft.AnimatedSwitcherTransition.FADE,
+        duration=300,
+    )
+
+    # Wrap the slide area in a GestureDetector so it can be swiped, not
+    # just advanced via the Next button.
+    def handle_drag_end(e):
+        velocity = getattr(e, "primary_velocity", 0) or 0
+        if velocity < -200:       # swipe left -> forward
+            advance_or_dismiss()
+        elif velocity > 200:      # swipe right -> back
+            go_to(state["index"] - 1)
+
+    slide_gesture = ft.GestureDetector(
+        content=slide_switcher,
+        on_horizontal_drag_end=handle_drag_end,
+    )
+
+    # ── next / skip controls ────────────────────────────────────────────
+    next_label = ft.Text("Next", size=14.5, weight=ft.FontWeight.W_700,
+                          color=ft.Colors.SURFACE)
+    next_icon = ft.Icon(ft.Icons.ARROW_FORWARD_ROUNDED, size=16,
+                         color=ft.Colors.SURFACE)
+    next_btn = ft.Container(
+        bgcolor=ft.Colors.ON_SURFACE,
+        border_radius=26,
+        padding=ft.Padding.symmetric(horizontal=22, vertical=13),
+        ink=True,
+        content=ft.Row(spacing=8, tight=True, controls=[next_label, next_icon]),
+    )
+    skip_btn = ft.TextButton(
+        "Skip", style=ft.ButtonStyle(color=ft.Colors.GREY_500)
+    )
+
+    # ── navigation / auto-advance ───────────────────────────────────────
+    def go_to(index: int, restart_auto: bool = True):
+        index = max(0, min(n_slides - 1, index))
+        state["index"] = index
+        slide_switcher.content = build_slide_content(index)
+        set_progress_static()
+        refresh_dots()
+        is_last = index == n_slides - 1
+        next_label.value = "Get started" if is_last else "Next"
+        next_btn.bgcolor = ft.Colors.PRIMARY if is_last else ft.Colors.ON_SURFACE
+        page.update()
+        if restart_auto:
+            start_auto()
+
+    async def auto_loop():
+        idx = state["index"]
+        fill = fills[idx]
+        target = segment_width()
+
+        # snap to 0 with no animation, then animate to full width in one
+        # continuous transition — this is what makes the fill smooth.
+        fill.animate = None
+        fill.width = 0
+        page.update()
+        await asyncio.sleep(0.02)  # let the 0-width frame render first
+        if state["dismissed"] or state["index"] != idx:
+            return
+        fill.animate = ft.Animation(int(ONBOARDING_AUTO_SECONDS * 1000), ft.AnimationCurve.LINEAR)
+        fill.width = target
+        page.update()
+
+        try:
+            await asyncio.sleep(ONBOARDING_AUTO_SECONDS)
+            if state["dismissed"] or state["index"] != idx:
+                return
+            if idx == n_slides - 1:
+                return
+            go_to(idx + 1)
+        except asyncio.CancelledError:
+            pass
+
+    def start_auto():
+        if state["auto_task"]:
+            state["auto_task"].cancel()
+        state["auto_task"] = page.run_task(auto_loop)
+
+    async def dismiss_async():
+        state["dismissed"] = True
+        if state["auto_task"]:
+            state["auto_task"].cancel()
+        await mark_onboarding_seen(page)
+        on_dismiss()
+
+    def advance_or_dismiss():
+        if state["index"] == n_slides - 1:
+            page.run_task(dismiss_async)
+        else:
+            go_to(state["index"] + 1)
+
+    def handle_next(e):
+        advance_or_dismiss()
+
+    def handle_skip(e):
+        go_to(n_slides - 1)
+
+    next_btn.on_click = handle_next
+    skip_btn.on_click = handle_skip
+
+    card_container = ft.SafeArea(content=ft.Container(
+        bgcolor=ft.Colors.ON_PRIMARY,
+        border_radius=28,
+        width=card_width(),
+        height=card_height(),
+        padding=ft.Padding.only(
+            left=CARD_H_PADDING, right=CARD_H_PADDING, top=18, bottom=50
+        ),
+        content=ft.Column(
+            spacing=14,
+            controls=[
+                progress_row,
+                ft.Row(alignment=ft.MainAxisAlignment.END, controls=[skip_btn]),
+                slide_gesture,
+                ft.Container(height=28),
+                ft.Row(
+                    alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[dots_row, next_btn],
+                ),
+            ],
+        ),
+    )
+    )
+    # Re-fit the card (and the progress fill widths) if the window/screen
+    # size changes, so this isn't locked to one phone viewport.
+    # NOTE: chains onto any pre-existing page.on_resized handler so we
+    # don't clobber other resize logic elsewhere in the app.
+    previous_on_resized = page.on_resize
+
+    def recompute_sizing(e=None):
+        card_container.width = card_width()
+        w = segment_width()
+        for i, fill in enumerate(fills):
+            fill.animate = None
+            fill.width = w if i <= state["index"] else 0
+        page.update()
+        if previous_on_resized:
+            previous_on_resized(e)
+
+    page.on_resized = recompute_sizing
+
+    set_progress_static()
+    refresh_dots()
+
+    overlay = ft.Container(
+        expand=True,
+        bgcolor=ft.Colors.with_opacity(0.55, ft.Colors.BLACK),
+        alignment=ft.Alignment.CENTER,
+        content=card_container,
+    )
+
+    start_auto()
+    return overlay
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # VIEW
 # ─────────────────────────────────────────────────────────────────────────────
 async def dashboard_view(page: ft.Page):
     app_bar = get_bottom_appbar(page)
+
+    # ── onboarding overlay (lives inside the View's body via a Stack, so it
+    # only covers the main page content — the bottom app bar is a separate
+    # Scaffold slot and sits outside this Stack, so it's never covered) ─────
+    onboarding_slot = ft.Container(
+        expand=True,
+        visible=False,
+        opacity=0,
+        scale=0.96,
+        animate_opacity=ft.Animation(400, ft.AnimationCurve.EASE_OUT),
+        animate_scale=ft.Animation(400, ft.AnimationCurve.EASE_OUT),
+        data="onboarding_overlay",
+    )
+
+    async def hide_onboarding_async():
+        # fade + shrink out, then actually remove it once the animation's done
+        bottom_appbar.opacity=1
+        onboarding_slot.opacity = 0
+        onboarding_slot.scale = 0.96
+        page.update()
+        await asyncio.sleep(0.4)
+        onboarding_slot.visible = False
+        onboarding_slot.content = None
+        page.update()
+
+    def hide_onboarding():
+        page.run_task(hide_onboarding_async)
+
+    async def maybe_show_onboarding():
+        # FORCE_SHOW_ONBOARDING (defined near ONBOARDING_SLIDES above) wins
+        # when set to True/False, for quick manual testing. Set it to None
+        # to fall back to the real/mock check_is_first_login() result.
+        seen = await page.shared_preferences.get('has_seen_onboarding')
+        print(seen)
+        if FORCE_SHOW_ONBOARDING is not None:
+            should_show = FORCE_SHOW_ONBOARDING
+        elif not seen:
+            should_show = await check_is_first_login(page) 
+        else:
+            return
+
+        if not should_show:
+            return
+
+        # let the dashboard render and settle first — this is what makes the
+        # overlay feel like it eases in over an already-loaded page instead
+        # of slamming in before anything underneath is visible
+        await asyncio.sleep(1.5)
+        bottom_appbar.opacity= 0.5
+        page.update()
+        onboarding_slot.content = build_onboarding_overlay(
+            page, on_dismiss=hide_onboarding
+        )
+        onboarding_slot.visible = True
+        page.update()
+        await asyncio.sleep(0.03)  # let the 0-opacity/0.96-scale frame render first
+        onboarding_slot.opacity = 1
+        onboarding_slot.scale = 1
+        page.update()
+
+    page.run_task(maybe_show_onboarding)
 
     # ── greeting text (mutated after data loads) ──────────────────────────────
     greeting_name = ft.Text(
@@ -521,48 +938,56 @@ async def dashboard_view(page: ft.Page):
         bgcolor=ft.Colors.ON_PRIMARY,
         padding=0,
         controls=[
-            ft.SafeArea(
+            ft.Stack(
                 expand=True,
-                content=ft.Column(
-                    expand=True,
-                    spacing=0,
-                    controls=[
-                        header,
-                        ft.Column(
+                controls=[
+                    ft.SafeArea(
+                        expand=True,
+                        content=ft.Column(
                             expand=True,
-                            scroll=ft.ScrollMode.AUTO,
                             spacing=0,
                             controls=[
-                                ft.Container(
-                                    padding=ft.Padding.symmetric(
-                                        horizontal=16, vertical=16
-                                    ),
-                                    content=ft.Column(
-                                        spacing=16,
-                                        controls=[
-                                            # Quick action tiles
-                                            quick_actions,
-                                            friends_card,
-                                            
-                                            #browse activity
-                                            activity_card,
-                                            # Continue learning
-                                            continue_learning_section,
+                                header,
+                                ft.Column(
+                                    expand=True,
+                                    scroll=ft.ScrollMode.AUTO,
+                                    spacing=0,
+                                    controls=[
+                                        ft.Container(
+                                            padding=ft.Padding.symmetric(
+                                                horizontal=16, vertical=16
+                                            ),
+                                            content=ft.Column(
+                                                spacing=16,
+                                                controls=[
+                                                    # Quick action tiles
+                                                    quick_actions,
+                                                    friends_card,
 
-                                            # Self-study
-                                            self_study_card,
-                                            
+                                                    #browse activity
+                                                    activity_card,
+                                                    # Continue learning
+                                                    continue_learning_section,
 
-                                            
+                                                    # Self-study
+                                                    self_study_card,
 
-                                            ft.Container(height=16),
-                                        ],
-                                    ),
-                                )
+
+
+                                                    ft.Container(height=16),
+                                                ],
+                                            ),
+                                        )
+                                    ],
+                                ),
                             ],
                         ),
-                    ],
-                ),
-            )
+                    ),
+                    # Onboarding sits on top of the page content only —
+                    # the bottom app bar is a separate Scaffold slot outside
+                    # this Stack, so it's never covered by the overlay.
+                    onboarding_slot,
+                ],
+            ),
         ],
     )

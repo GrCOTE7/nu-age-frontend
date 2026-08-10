@@ -82,7 +82,7 @@ def failure_copy(kind: str, ex: Exception = None, status: int = None) -> dict:
         return {
             "icon": ft.Icons.DNS_OUTLINED,
             "snack_message": "Server error, please try again",
-            "dialog_title": "Server error",
+            "dialog_title": "Network error",
             "dialog_message": f"Something went wrong on our end{detail}. Please try again shortly.",
             "dev_detail": dev_detail or (f"HTTP {status}" if status else None),
         }
@@ -148,7 +148,7 @@ async def main(page: ft.Page):
 
         ),
         page_transitions=ft.PageTransitionsTheme(
-            android="fadeUpwards",
+            android="cupertino",
             ios="cupertino",
         ),
     )
@@ -165,7 +165,7 @@ async def main(page: ft.Page):
                     tertiary="#212121",          # Subtle borders
         ),
         page_transitions=ft.PageTransitionsTheme(
-            android="fadeUpwards",
+            android=ft.PageTransitionTheme.CUPERTINO,
             ios="cupertino",
         ),
     )
@@ -176,7 +176,7 @@ async def main(page: ft.Page):
 
     # --- 2. FORCE LIGHT MODE ---
 
-    # ─────────────────────────────────────────────
+    # ─────────────────────────────────────────────s
     # DARK MODE TOGGLE — the only new function
     # ─────────────────────────────────────────────
 
@@ -1601,6 +1601,74 @@ async def main(page: ft.Page):
         page.update()
 
     page.on_route_change = route_change
+
+    # --- BUG FIX: token-expiry white screen after backgrounding the app ---
+    #
+    # Root cause: `main()` runs once per live session, and until now the
+    # ONLY thing that ever re-checked the auth token was `route_change` —
+    # which only fires when `page.route` actually changes. Backgrounding
+    # the app (switching away, locking the screen, minimizing) and coming
+    # back later doesn't change the route at all: the session was never
+    # torn down, so `main()` never re-runs and route_change never re-fires.
+    # The token can sit expired for hours with nothing ever re-validating
+    # it — you just see whatever was last on screen, frozen. If that
+    # happened to be a skeleton mid-shimmer, the animation task is still
+    # technically "running" but the client-side view underneath it is
+    # stale/torn-down by the time you look again, which is what reads as
+    # "shimmer, then white screen". Force-quitting and reopening "fixes"
+    # it only because that starts a brand-new session, which runs the
+    # bootstrap token check near the end of main() fresh.
+    #
+    # Fix: listen for the window regaining focus (fires when the OS brings
+    # the app back to the foreground) and silently re-validate the token
+    # against the backend. We deliberately do NOT just call route_change()
+    # unconditionally here — route_change always pushes a fresh skeleton
+    # over whatever's on screen before it knows if anything's actually
+    # wrong, which would flash on every single resume even when the
+    # session is perfectly fine. Instead: ping the backend quietly, and
+    # only fall through to the full route_change() (which knows how to
+    # clear the token, show the session-expired dialog, and land on
+    # login) when we actually find the token is dead or missing.
+    resume_check_state = {"in_flight": False}
+
+    def _is_public_route(route):
+        # Kept in sync with is_public_route() inside _route_change_inner —
+        # duplicated here because that one is a nested closure scoped to
+        # a single route_change() call, not reachable from this handler.
+        return route in ["/", "/signup"] or (route or "").startswith("/accept-invite/")
+
+    async def on_window_event(e: ft.WindowEvent):
+        if e.data not in ("focus", "restore", "show"):
+            return
+        if _is_public_route(page.route):
+            return  # not logged in / not on a protected screen — nothing to check
+        # Guard against overlapping checks if multiple focus-ish events
+        # fire in quick succession (observed on some platforms).
+        if resume_check_state["in_flight"]:
+            return
+        resume_check_state["in_flight"] = True
+        try:
+            token = await page.shared_preferences.get("auth_token")
+            if not token:
+                return  # already logged out; nothing new to report
+            try:
+                status, _ = await get_current_user_request(token)
+            except Exception:
+                # Network hiccup on resume — not a session problem, don't
+                # act on it. The next real navigation will surface any
+                # persisting issue through the normal route_change path.
+                return
+            if status in (401, 403):
+                # Token genuinely expired while backgrounded. Re-run the
+                # full route_change, which will re-detect this same
+                # 401/403, clear the token, and show the session-expired
+                # dialog over a real login view — the exact path that
+                # already works correctly for in-session navigations.
+                await route_change(None)
+        finally:
+            resume_check_state["in_flight"] = False
+
+    page.window.on_event = on_window_event
 
     # --- BUG FIX: intermittent white screen on FIRST load (distinct from
     # the token-expiry bug above — this can happen regardless of whether

@@ -498,6 +498,8 @@ PREVIEW_CONTENT_RENDERERS = {
 
 
 def render_preview_scenario_ui(lesson: dict):
+    async def handle_link_tap(e):
+                        await e.page.launch_url(e.data)
     content = lesson.get("content", {})
     scenario_text = str(content.get("scenario", "")).strip()
     choices = [c for c in content.get("choices", []) if str(c.get("text", "")).strip()]
@@ -554,7 +556,36 @@ def render_preview_scenario_ui(lesson: dict):
                     ft.Icon(ft.Icons.CALL_SPLIT_ROUNDED, color=UI_ACCENT, size=28),
                     ft.Text("Decision Matrix", weight=ft.FontWeight.BOLD, size=18, color=UI_ACCENT)
                 ]),
-                ft.Text(scenario_text, size=16, color=ft.Colors.ON_SURFACE),
+                                    ft.Markdown(
+                                scenario_text,
+                                selectable=True, 
+                                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,  # supports HTML passthrough
+                                code_theme=ft.MarkdownCodeTheme.ATELIER_LAKESIDE_DARK, 
+                                code_style_sheet=ft.MarkdownStyleSheet(
+                        code_text_style=ft.TextStyle(font_family="Roboto Mono", size=15),
+                        codeblock_decoration=ft.BoxDecoration(     # correct field name, fixes the light-mode bg bug
+                            bgcolor="#0662AD",
+                            border_radius=ft.BorderRadius.all(8),
+                        ),
+                    ),
+                                  # light background, default Flet uses
+                                
+                                on_tap_link=handle_link_tap ,
+                                md_style_sheet=ft.MarkdownStyleSheet(
+                        text_alignment=ft.TextAlign.START,
+                        p_text_style=ft.TextStyle(
+                            size=15,
+                            weight=ft.FontWeight.W_400,
+                            color=ft.Colors.ON_SURFACE,
+                        ),
+                    code_text_style=ft.TextStyle(
+                        size=15,
+                        weight=ft.FontWeight.NORMAL,
+                        font_family="monospace",
+                        color=ft.Colors.ON_SURFACE_VARIANT,
+                        bgcolor=ft.Colors.SCRIM,
+                    ),
+                )),
                 ft.Divider(height=10, color=ft.Colors.OUTLINE_VARIANT),
                 ft.Text("What is the best course of action?", weight=ft.FontWeight.W_600, color=ft.Colors.ON_SURFACE_VARIANT),
                 buttons_col,

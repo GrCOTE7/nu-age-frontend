@@ -48,16 +48,22 @@ async def get_my_organisation(token: str):
         return {"error": str(e)}
 
 
-async def get_organisation_members(token: str, id: str, students: bool = False, teachers: bool = False):
-    url = f"{api_url}/organisations/members?id={id}&students={students}&teachers={teachers}"
+async def get_organisation_members(
+    token: str,
+    id: str,
+    students: bool = False,
+    teachers: bool = False,
+):
+    url = f"{api_url}/organisations/members"
+    params = {"id": id, "students": students, "teachers": teachers}
     headers = {"Authorization": f"Bearer {token}"}
 
     try:
         async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT, verify=ssl_context) as client:
-            response = await client.get(url, headers=headers)
+            response = await client.get(url, params=params, headers=headers)
+
             if response.status_code == 200:
                 return response.json()
-
             elif response.status_code == 401:
                 print("Unauthorized access. Please log in again.")
                 return {"error": "unauthorized"}
@@ -66,7 +72,6 @@ async def get_organisation_members(token: str, id: str, students: bool = False, 
     except Exception as e:
         print(f"Request Error: {e}")
         return {"error": str(e)}
-
 
 async def get_organisation_courses(
     token: str,

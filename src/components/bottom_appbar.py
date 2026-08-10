@@ -7,7 +7,10 @@ def get_bottom_appbar(page: ft.Page):
     # Safely extract user data and force uppercase for the role check
     user_data = page.session.store.get("current_user") or {}
     role = user_data.get("role", "STUDENT").upper()
-
+    def change_color(e:ft.IconButton):
+        e.control.icon_color = ft.Colors.ON_PRIMARY
+        e.control.bgcolor=ft.Colors.PRIMARY
+        page.update()
     # --- 1. THE HELPER FUNCTION ---
     def nav_item(icon_name, route, is_active, is_rotated=False):
         
@@ -24,13 +27,23 @@ def get_bottom_appbar(page: ft.Page):
                 # 2. The Icon Button
                 ft.IconButton(
                     icon=icon_name, 
-                    icon_color=ft.Colors.PRIMARY,
+                    #icon_color=ft.Colors.PRIMARY,
                     icon_size=25,
-                    bgcolor=ft.Colors.TERTIARY if is_active else None,
-                    hover_color= "#B7F4B5",
+                    #bgcolor=ft.Colors.TERTIARY if is_active else None,
+                    #hover_color= "#B7F4B5",
                     mouse_cursor=ft.MouseCursor.CLICK,
                     rotate=ft.Rotate(angle=-0.5) if is_rotated else None,
-                    on_click=lambda e, r=route: page.go(r) 
+                    on_click=lambda e, r=route: page.go(r),
+                    style=ft.ButtonStyle(
+        color={
+            ft.ControlState.DEFAULT: ft.Colors.ON_PRIMARY if is_active else ft.Colors.PRIMARY,
+            ft.ControlState.HOVERED: ft.Colors.ON_PRIMARY,
+        },
+        bgcolor={
+            ft.ControlState.DEFAULT: ft.Colors.PRIMARY if is_active else ft.Colors.SURFACE,
+            ft.ControlState.HOVERED: ft.Colors.PRIMARY,
+        },
+    )
                 ),
                 # 3. The Text Label (Flattened into the main column)
                 ft.Text(

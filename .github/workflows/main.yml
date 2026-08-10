@@ -84,7 +84,23 @@ jobs:
       - name: Clean Flet build cache
         run: rm -rf build .flet_build ~/.flet 2>/dev/null || true
 
+      - name: Decode signing keystore
+        run: |
+          # Writes the upload keystore from the base64 secret so flet build apk
+          # can sign the release APK. Without this, Flet falls back to the
+          # debug key (fine) or, if that fallback ever fails silently, produces
+          # an UNSIGNED apk — which Android's installer rejects outright with
+          # "There was a problem parsing the package". Signing explicitly here
+          # removes that failure mode instead of relying on fallback behavior.
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/upload-keystore.jks" >> "$GITHUB_ENV"
+
       - name: Compile the APK
+        env:
+          FLET_ANDROID_SIGNING_KEY_STORE: ${{ env.KEYSTORE_PATH }}
+          FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          FLET_ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          FLET_ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -o pipefail
           # --arch arm64-v8a restricts native libs/Python dist to a single ABI.
@@ -100,6 +116,22 @@ jobs:
             echo "::error::CRITICAL ERROR: Flet compiler crashed! Check verbose logs for Dart/Python errors."
             exit 1
           fi
+
+      - name: Verify APK is signed
+        run: |
+          # Belt-and-suspenders: fail the job explicitly if an unsigned APK
+          # would otherwise slip through and get uploaded as the artifact.
+          set -e
+          APK_FILE=$(find build/apk -name "*.apk" | head -n 1)
+          if [ -z "$APK_FILE" ]; then
+            echo "::error::No APK found in build/apk after build step."
+            exit 1
+          fi
+          if ! unzip -l "$APK_FILE" | grep -q "META-INF/.*\.RSA\|META-INF/.*\.DSA\|META-INF/.*\.EC"; then
+            echo "::error::APK is UNSIGNED — no signature block found in META-INF. Refusing to publish an unsigned APK."
+            exit 1
+          fi
+          echo "APK signature block found — OK."
 
       - name: Show extra logs on failure
         if: failure()

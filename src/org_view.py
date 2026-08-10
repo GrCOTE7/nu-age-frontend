@@ -1417,7 +1417,7 @@ async def organisations_view(page: ft.Page):
                                 controls=[
                                     ft.Text(
                                         f"Hey, {first_name}, Ready to teach?",
-                                        size=18,
+                                        size=16,
                                         weight=ft.FontWeight.W_700,
                                         color=ft.Colors.WHITE,
                                     ),

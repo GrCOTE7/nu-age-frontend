@@ -42,13 +42,16 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
             _log_error("get_categories", ex)
             return []
 
-    async def _get_teachers() -> list:
-        try:
-            result = await get_organisation_members(token, id=org_id, teachers=True)
-            return result or []
-        except Exception as ex:
-            _log_error("get_teachers", ex)
+    async def _get_teachers(token: str, org_id: str):
+
+        result = await get_organisation_members(token, id=org_id, teachers=True)
+        print(result)
+
+        if isinstance(result, dict) and "error" in result:
+            print(f"Failed to fetch teachers: {result['error']}")
             return []
+
+        return result
 
     async def _get_org_students() -> list:
         try:
@@ -60,9 +63,10 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
 
     async def _save_setting(key: str, value) -> bool:
         try:
-            value = None if value in ["None", "none", "false", "null"] else value
+            if key == "teacher_id" and value in ["none", "None"]:
+                value = None
             await update_course_settings(token, course_id, {key: value})
-            return True  # ← if no exception, it succeeded
+            return True
         except Exception as ex:
             _log_error(f"save_setting:{key}", ex)
             return False
@@ -446,7 +450,6 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
         async def fetch_and_populate():
             try:
                 students = await get_enrolled_org_students(token, course_id, params={})
-                print(students)
             except Exception as ex:
                 _log_error("get_enrolled_org_students", ex)
                 students = None
@@ -627,7 +630,7 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
         try:
             categories, teachers = await _parallel_fetch(
                 _get_categories(),
-                _get_teachers(),
+                _get_teachers(token, org_id),
             )
         except Exception as ex:
             _log_error("load_initial_data", ex)

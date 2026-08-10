@@ -40,11 +40,13 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
 
     user_data     = page.session.store.get("current_user") or {}
     current_user_id = user_data.get("id")
+    current_user_role = user_data.get("role")
+    print(current_user_role)
 
     # Freelance = no real org passed in, or explicitly pointed at the shared
     # Nu Age account. Either way, this teacher only gets to see/manage/build/
     # analyze their OWN courses, never the rest of that org's library.
-    is_freelance = (not org_id) or (org_id == DEFAULT_ORG_ID)
+    is_freelance = (not org_id) or (current_user_role != "Admin")
     effective_org_id = org_id or DEFAULT_ORG_ID
 
     # ── view-level state ──────────────────────────────────────────────────────

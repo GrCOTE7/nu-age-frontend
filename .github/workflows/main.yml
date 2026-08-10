@@ -135,6 +135,8 @@ jobs:
           echo "APK signature block found — OK."
 
       - name: Clean up decoded keystore
+        if: always()
+        run: rm -f upload-keystore.jks
         if: failure()
         run: tail -n 400 flet_build.log || true
 

@@ -46,6 +46,10 @@ splash_android_dark = "assets/splash_android_dark.png"
 android_gravity = "fill"  # position of splash image: center, fill, etc.
 hide_animation = true     # hides the Flet spinner/logo during Python startup
 
+[tool.flet.android.signing]
+key_alias = "upload"
+key_store = "upload-keystore.jks"
+
 [tool.flet.android]
 permissions = [
     # ─── NETWORK ──────────────────────────────────────────────────────────────

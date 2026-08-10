@@ -1048,7 +1048,7 @@ async def chat_view(page: ft.Page) -> ft.View:
                             ft.Container(width=12),
                             ft.Column([
                                 ft.Text(display_name, weight=ft.FontWeight.W_600, size=14),
-                                ft.Text(u.get("email", ""), size=12, color=ft.Colors.ON_SURFACE38)
+                                ft.Text(u.get("email", ""), size=12, color=ft.Colors.ON_SURFACE)
                             ], spacing=2, tight=True, expand=True)
                         ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=0)
                     )

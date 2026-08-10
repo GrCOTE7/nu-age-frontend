@@ -82,24 +82,25 @@ jobs:
           flet doctor
 
       - name: Clean Flet build cache
-        run: rm -rf build .flet_build ~/.flet 2>/dev/null || true
+        run: |
+          rm -rf build .flet_build ~/.flet 2>/dev/null || true
+          # Explicit: ensure no stale/partial apk from a prior failed run can
+          # ever be picked up by the later "find build/apk -name *.apk" check.
+          find . -name "*.apk" -delete 2>/dev/null || true
 
       - name: Decode signing keystore
         run: |
-          # Writes the upload keystore from the base64 secret so flet build apk
-          # can sign the release APK. Without this, Flet falls back to the
-          # debug key (fine) or, if that fallback ever fails silently, produces
-          # an UNSIGNED apk — which Android's installer rejects outright with
-          # "There was a problem parsing the package". Signing explicitly here
-          # removes that failure mode instead of relying on fallback behavior.
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/upload-keystore.jks"
-          echo "KEYSTORE_PATH=$RUNNER_TEMP/upload-keystore.jks" >> "$GITHUB_ENV"
+          # pyproject.toml's [tool.flet.android.signing].key_store = "upload-keystore.jks"
+          # is resolved relative to the project root, so the file must land
+          # exactly there (not in RUNNER_TEMP) for flet's Gradle template to
+          # find it and actually apply the release signingConfig. Passwords
+          # and alias remain env-var driven, which flet-cli reads at build
+          # time regardless of location.
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "upload-keystore.jks"
 
       - name: Compile the APK
         env:
-          FLET_ANDROID_SIGNING_KEY_STORE: ${{ env.KEYSTORE_PATH }}
           FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          FLET_ANDROID_SIGNING_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           FLET_ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -o pipefail
@@ -133,7 +134,7 @@ jobs:
           fi
           echo "APK signature block found — OK."
 
-      - name: Show extra logs on failure
+      - name: Clean up decoded keystore
         if: failure()
         run: tail -n 400 flet_build.log || true
 

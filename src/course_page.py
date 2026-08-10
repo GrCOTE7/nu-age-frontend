@@ -334,42 +334,31 @@ async def course_learner_view(page: ft.Page, course_id: str):
             return fn
         return decorator
 
+    import flet_video as ftv
+
+
     @register_content_renderer("video_url")
     def render_video_block(value, lesson):
-        player = Video(
+        player = ftv.Video(
             expand=True,
-            playlist=[VideoMedia(value)],
-            autoplay=False,
+            playlist=[ftv.VideoMedia(value)],
+            autoplay=True,
             volume=100,
-            show_controls=True,
+            controls=ftv.MaterialDesktopVideoControls(
+                visible_on_mount=True,
+                display_seek_bar=True,
+                play_and_pause_on_tap=True,
+                modify_volume_on_scroll=True,
+                toggle_fullscreen_on_double_press=True,
+            ),
         )
 
         video_container = ft.Container(
-            aspect_ratio=21 / 9,
+            aspect_ratio=16 / 9,
             border_radius=12,
             bgcolor=ft.Colors.ON_PRIMARY,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            content=ft.Stack(
-                [
-                    player,
-                    ft.Container(
-                        content=ft.Text(
-                            lesson["content"].get("file_name", "Video Lesson"),
-                            color=ft.Colors.SURFACE,
-                            weight=ft.FontWeight.BOLD,
-                            size=16,
-                        ),
-                        padding=ft.Padding.symmetric(horizontal=15, vertical=10),
-                        gradient=ft.LinearGradient(
-                            begin=ft.Alignment.TOP_CENTER,
-                            end=ft.Alignment.BOTTOM_CENTER,
-                            colors=[ft.Colors.ON_PRIMARY, ft.Colors.TRANSPARENT],
-                        ),
-                        left=0, right=0, top=0, height=60,
-                    ),
-                ],
-                expand=True,
-            ),
+            content=player,  # dropped the single-child Stack wrapper
         )
 
         return ft.Container(
@@ -602,22 +591,22 @@ async def course_learner_view(page: ft.Page, course_id: str):
     # =========================================================
     def render_scenario_ui(lesson: dict):
         async def handle_link_tap(e):
-                    await e.page.launch_url(e.data)
+            await e.page.launch_url(e.data)
+
         content = lesson.get("content", {})
         scenario_text = content.get("scenario", "")
         choices = content.get("choices", [])
-        
+
         consequence_box = ft.Container(
             padding=20,
             border_radius=12,
             bgcolor=ft.Colors.SURFACE,
             border=ft.Border.all(1, ft.Colors.BLUE_200),
-            visible=False, 
+            visible=False,
             content=ft.Column([
                 ft.Row([ft.Icon(ft.Icons.LIGHTBULB_CIRCLE, color=ft.Colors.BLUE_700), ft.Text("Result", weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_900)]),
                 ft.Markdown("", selectable=False, extension_set=ft.MarkdownExtensionSet.GITHUB_FLAVORED, md_style_sheet=ft.MarkdownStyleSheet(
                     p_text_style=ft.TextStyle(
-
                         color=ft.Colors.ON_SURFACE
                     ),
                 ))
@@ -625,16 +614,44 @@ async def course_learner_view(page: ft.Page, course_id: str):
         )
 
         buttons_col = ft.Column(spacing=10, horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
-        
+
+        def make_button_style(selected: bool):
+            if selected:
+                return ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=8),
+                    padding=20,
+                    bgcolor={
+                        ft.ControlState.DEFAULT: UI_ACCENT,
+                        ft.ControlState.HOVERED: UI_ACCENT,
+                        ft.ControlState.PRESSED: UI_ACCENT,
+                    },
+                    color={
+                        ft.ControlState.DEFAULT: ft.Colors.SURFACE,
+                        ft.ControlState.HOVERED: ft.Colors.SURFACE,
+                        ft.ControlState.PRESSED: ft.Colors.SURFACE,
+                    },
+                    side={
+                        ft.ControlState.DEFAULT: ft.BorderSide(1, UI_ACCENT),
+                    },
+                )
+            else:
+                return ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=8),
+                    padding=20,
+                    bgcolor={
+                        ft.ControlState.DEFAULT: ft.Colors.TRANSPARENT,
+                        ft.ControlState.HOVERED: ft.Colors.with_opacity(0.08, UI_ACCENT),
+                        ft.ControlState.PRESSED: ft.Colors.with_opacity(0.15, UI_ACCENT),
+                    },
+                    color={
+                        ft.ControlState.DEFAULT: UI_ACCENT,
+                    },
+                )
+
         def handle_choice(idx, cons_text):
             for i, btn in enumerate(buttons_col.controls):
-                if i == idx:
-                    btn.bgcolor = UI_ACCENT
-                    btn.color = ft.Colors.SURFACE
-                else:
-                    btn.bgcolor = ft.Colors.TRANSPARENT
-                    btn.color = UI_ACCENT
-            
+                btn.style = make_button_style(selected=(i == idx))
+
             consequence_box.content.controls[1].value = cons_text
             consequence_box.visible = True
             lesson["_page"].update()
@@ -642,7 +659,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         for idx, ch in enumerate(choices):
             btn = ft.OutlinedButton(
                 content=ch.get("text", f"Option {idx+1}"),
-                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), padding=20),
+                style=make_button_style(selected=False),
                 on_click=lambda e, i=idx, c_t=ch.get("consequence", ""): handle_choice(i, c_t)
             )
             buttons_col.controls.append(btn)
@@ -659,43 +676,31 @@ async def course_learner_view(page: ft.Page, course_id: str):
                         ft.Text("Decision Matrix", weight=ft.FontWeight.BOLD, size=18, color=UI_ACCENT)
                     ]),
                     ft.Markdown(
-                scenario_text,
-                selectable=True, 
-                extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,  # supports HTML passthrough
-                code_theme=ft.MarkdownCodeTheme.ATELIER_LAKESIDE_DARK, 
-                code_style_sheet=ft.MarkdownStyleSheet(
-        code_text_style=ft.TextStyle(font_family="Roboto Mono", size=15),
-        codeblock_decoration=ft.BoxDecoration(     # correct field name, fixes the light-mode bg bug
-            bgcolor="#0662AD",
-            border_radius=ft.BorderRadius.all(8),
-        ),
-    ),
-                  # light background, default Flet uses
-                
-                on_tap_link=handle_link_tap ,
-                md_style_sheet=ft.MarkdownStyleSheet(
-        text_alignment=ft.TextAlign.START,
-        p_text_style=ft.TextStyle(
-            size=15,
-            weight=ft.FontWeight.W_400,
-            color=ft.Colors.ON_SURFACE,
-        ),
-    code_text_style=ft.TextStyle(
-        size=15,
-        weight=ft.FontWeight.NORMAL,
-        font_family="monospace",
-        color=ft.Colors.ON_SURFACE_VARIANT,
-        bgcolor=ft.Colors.SCRIM,
-    ),
-),
-            ),
-                    ft.Divider(height=10, color=ft.Colors.OUTLINE_VARIANT),
-                    ft.Text("What is the best course of action?", weight=ft.FontWeight.W_600, color=ft.Colors.ON_SURFACE_VARIANT),
+                        scenario_text,
+                        selectable=True,
+                        extension_set=ft.MarkdownExtensionSet.GITHUB_WEB,
+                        code_theme=ft.MarkdownCodeTheme.ATELIER_LAKESIDE_DARK,
+                        code_style_sheet=ft.MarkdownStyleSheet(
+                            code_text_style=ft.TextStyle(font_family="Roboto Mono", size=15),
+                            codeblock_decoration=ft.BoxDecoration(
+                                bgcolor="#0662AD",
+                                border_radius=ft.BorderRadius.all(8),
+                            ),
+                        ),
+                        on_tap_link=handle_link_tap,
+                        md_style_sheet=ft.MarkdownStyleSheet(
+                            text_alignment=ft.TextAlign.START,
+                            p_text_style=ft.TextStyle(
+                                size=15,
+                                weight=ft.FontWeight.W_400,
+                                color=ft.Colors.ON_SURFACE,
+                            ),
+                        ),
+                    ),
                     buttons_col,
-                    ft.Container(height=5),
-                    consequence_box
+                    consequence_box,
                 ],
-                spacing=10,
+                spacing=15,
             ),
         )
     def render_assessment_ui(lesson: dict):

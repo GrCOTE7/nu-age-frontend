@@ -177,17 +177,35 @@ jobs:
         run: |
           # Belt-and-suspenders: fail the job explicitly if an unsigned APK
           # would otherwise slip through and get uploaded as the artifact.
+          #
+          # NOTE: this used to grep for META-INF/*.RSA|DSA|EC (the old JAR/v1
+          # signing artifacts). That check was a false positive generator:
+          # since minSdk is 24, AGP is free to sign release builds with
+          # Signature Scheme v2/v3 only, which embeds the signature in a
+          # binary "APK Signing Block" instead of META-INF - a validly
+          # v2/v3-signed, installable APK legitimately has NO META-INF/*.RSA
+          # file at all. Use apksigner (the real Android tool for this) so
+          # v1/v2/v3/v4 are all correctly recognized instead of assuming the
+          # old JAR-signing layout.
           set -e
           APK_FILE=$(find build/apk -name "*.apk" | head -n 1)
           if [ -z "$APK_FILE" ]; then
             echo "::error::No APK found in build/apk after build step."
             exit 1
           fi
-          if ! unzip -l "$APK_FILE" | grep -q "META-INF/.*\.RSA\|META-INF/.*\.DSA\|META-INF/.*\.EC"; then
-            echo "::error::APK is UNSIGNED — no signature block found in META-INF. Refusing to publish an unsigned APK."
+
+          APKSIGNER=$(find "${ANDROID_HOME:-/usr/local/lib/android/sdk}/build-tools" -name apksigner 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$APKSIGNER" ]; then
+            echo "::error::apksigner not found under Android SDK build-tools - cannot verify signing."
             exit 1
           fi
-          echo "APK signature block found — OK."
+          echo "Using apksigner: $APKSIGNER"
+
+          if ! "$APKSIGNER" verify --print-certs "$APK_FILE"; then
+            echo "::error::APK failed apksigner verification — it is unsigned or the signature is invalid. Refusing to publish."
+            exit 1
+          fi
+          echo "APK signature verified by apksigner — OK."
 
       - name: Clean up decoded keystore
         if: always()

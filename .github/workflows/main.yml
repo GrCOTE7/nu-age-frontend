@@ -119,7 +119,25 @@ jobs:
 
       - name: Compile the APK
         env:
+          # These four env vars are read directly by Gradle's
+          # `System.getenv(...)` calls inside the generated
+          # signingConfigs.release block. All four MUST be set here as
+          # literal FLET_* env vars — the --android-signing-key-store CLI
+          # flag only controls whether flet-cli renders the signingConfigs
+          # block in the first place; it does NOT export
+          # FLET_ANDROID_SIGNING_KEY_STORE for Gradle to read. Without it
+          # (and without FLET_ANDROID_SIGNING_KEY_ALIAS), storeFile and
+          # keyAlias silently resolve to null, Gradle builds an unusable
+          # signing config without erroring, and AGP quietly falls back to
+          # an unsigned APK.
+          FLET_ANDROID_SIGNING_KEY_STORE: ${{ env.KEYSTORE_PATH }}
           FLET_ANDROID_SIGNING_KEY_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          # Not a secret - just the alias name inside the keystore (confirmed via
+          # the "Verify decoded keystore is valid" step's `keytool -list -v` output:
+          # "Alias name: upload"). Hardcoded here instead of a repo secret since
+          # knowing the alias alone is useless without the keystore file + both
+          # passwords.
+          FLET_ANDROID_SIGNING_KEY_ALIAS: upload
           FLET_ANDROID_SIGNING_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -o pipefail
@@ -131,7 +149,7 @@ jobs:
           # last ~6 years; x86_64 is only useful for emulators and armeabi-v7a is
           # legacy 32-bit devices. Add more archs back here only if you have a
           # concrete reason to ship them.
-          yes | flet build apk --product "Nu Age" --arch arm64-v8a --android-signing-key-store "$KEYSTORE_PATH" --verbose 2>&1 | tee flet_build.log || true
+          yes | flet build apk --product "Nu Age" --arch arm64-v8a --android-signing-key-store "$KEYSTORE_PATH" --android-signing-key-alias "$FLET_ANDROID_SIGNING_KEY_ALIAS" --verbose 2>&1 | tee flet_build.log || true
           if ! grep -q "Successfully built your .apk for Android" flet_build.log; then
             echo "::error::CRITICAL ERROR: Flet compiler crashed! Check verbose logs for Dart/Python errors."
             exit 1

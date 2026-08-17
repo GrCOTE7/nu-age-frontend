@@ -82,7 +82,7 @@ def Signup_view(page: ft.Page):
 
         is_processing    = True
         Submit.disabled  = True
-        Submit.text      = "Creating account…"
+        Submit.content   = ft.ProgressRing(width=16, height=16, color=ft.Colors.ON_PRIMARY)
         page.update()
 
         try:
@@ -146,7 +146,7 @@ def Signup_view(page: ft.Page):
         finally:
             is_processing   = False
             Submit.disabled = False
-            Submit.text     = "Create Account"
+            Submit.content  = ft.Text("Create Account")
             page.update()
 
     # ── dialogs ───────────────────────────────────────────────────
@@ -288,6 +288,7 @@ def Signup_view(page: ft.Page):
         focused_border_color=ft.Colors.PRIMARY,
         content_padding=ft.Padding.symmetric(horizontal=14, vertical=10),
         expand=True,
+        on_change=validate_inputs,
     )
 
     University = ft.Dropdown(

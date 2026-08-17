@@ -196,57 +196,71 @@ def has_any_downloaded_courses(page: ft.Page = None) -> bool:
 # ── Chat Caching Helpers ──────────────────────────────────────────────
 
 def get_cached_chat_channels(page: ft.Page = None):
-    db = get_local_db(page)
-    db.row_factory = sqlite3.Row
-    rows = db.execute("SELECT * FROM chat_channels ORDER BY updated_at DESC").fetchall()
-    return [dict(r) for r in rows]
+    try:
+        db = get_local_db(page)
+        db.row_factory = sqlite3.Row
+        rows = db.execute("SELECT * FROM chat_channels ORDER BY updated_at DESC").fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"[CACHE ERROR] get_cached_chat_channels failed: {e}")
+        return []
 
 def upsert_chat_channels(page: ft.Page, channels: list):
-    db = get_local_db(page)
-    with db:
-        for ch in channels:
-            db.execute("""
-                INSERT INTO chat_channels (id, name, type, role, last_message_snippet, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    name=excluded.name,
-                    type=excluded.type,
-                    role=excluded.role,
-                    last_message_snippet=excluded.last_message_snippet,
-                    updated_at=excluded.updated_at
-            """, (ch['id'], ch.get('name'), ch['type'], ch.get('role', 'member'), ch.get('last_message_snippet'), ch.get('updated_at', '')))
+    try:
+        db = get_local_db(page)
+        with db:
+            for ch in channels:
+                db.execute("""
+                    INSERT INTO chat_channels (id, name, type, role, last_message_snippet, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        name=excluded.name,
+                        type=excluded.type,
+                        role=excluded.role,
+                        last_message_snippet=excluded.last_message_snippet,
+                        updated_at=excluded.updated_at
+                """, (ch['id'], ch.get('name'), ch['type'], ch.get('role', 'member'), ch.get('last_message_snippet'), ch.get('updated_at', '')))
+    except Exception as e:
+        print(f"[CACHE ERROR] upsert_chat_channels failed: {e}")
 
 def get_cached_messages(page: ft.Page, channel_id: str):
-    db = get_local_db(page)
-    db.row_factory = sqlite3.Row
-    rows = db.execute("SELECT * FROM chat_messages WHERE channel_id=? ORDER BY created_at ASC", (channel_id,)).fetchall()
-    
-    msgs = []
-    for r in rows:
-        d = dict(r)
-        d["sender"] = {
-            "id": d["sender_id"],
-            "name": d.get("sender_name") or "Unknown"
-        }
-        if d.get("metadata_payload"):
-            import json
-            try:
-                d["metadata_payload"] = json.loads(d["metadata_payload"])
-            except Exception:
-                pass
-        msgs.append(d)
-    return msgs
+    try:
+        db = get_local_db(page)
+        db.row_factory = sqlite3.Row
+        rows = db.execute("SELECT * FROM chat_messages WHERE channel_id=? ORDER BY created_at ASC", (channel_id,)).fetchall()
+        
+        msgs = []
+        for r in rows:
+            d = dict(r)
+            d["sender"] = {
+                "id": d["sender_id"],
+                "name": d.get("sender_name") or "Unknown"
+            }
+            if d.get("metadata_payload"):
+                import json
+                try:
+                    d["metadata_payload"] = json.loads(d["metadata_payload"])
+                except Exception:
+                    pass
+            msgs.append(d)
+        return msgs
+    except Exception as e:
+        print(f"[CACHE ERROR] get_cached_messages failed: {e}")
+        return []
 
 def upsert_chat_messages(page: ft.Page, messages: list):
-    db = get_local_db(page)
-    with db:
-        for msg in messages:
-            db.execute("""
-                INSERT INTO chat_messages (id, channel_id, sender_id, sender_name, type, content, metadata_payload, created_at, status)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
-                    sender_name=excluded.sender_name,
-                    content=excluded.content,
-                    metadata_payload=excluded.metadata_payload,
-                    status=excluded.status
-            """, (msg['id'], msg['channel_id'], msg['sender_id'], msg.get('sender_name', 'Unknown'), msg.get('type', 'text'), msg.get('content', ''), msg.get('metadata_payload', None), msg.get('created_at', ''), msg.get('status', 'sent')))
+    try:
+        db = get_local_db(page)
+        with db:
+            for msg in messages:
+                db.execute("""
+                    INSERT INTO chat_messages (id, channel_id, sender_id, sender_name, type, content, metadata_payload, created_at, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(id) DO UPDATE SET
+                        sender_name=excluded.sender_name,
+                        content=excluded.content,
+                        metadata_payload=excluded.metadata_payload,
+                        status=excluded.status
+                """, (msg['id'], msg['channel_id'], msg['sender_id'], msg.get('sender_name', 'Unknown'), msg.get('type', 'text'), msg.get('content', ''), msg.get('metadata_payload', None), msg.get('created_at', ''), msg.get('status', 'sent')))
+    except Exception as e:
+        print(f"[CACHE ERROR] upsert_chat_messages failed: {e}")

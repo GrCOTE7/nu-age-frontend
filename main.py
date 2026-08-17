@@ -1399,7 +1399,7 @@ async def main(page: ft.Page):
         troute = ft.TemplateRoute(page.route)
 
         def is_public_route(route):
-            return route in ["/", "/signup"] or route.startswith("/accept-invite/")
+            return route in ["/", "/login", "/signup"] or route.startswith("/accept-invite/")
 
         def is_offline_capable_route(route):
             # Routes reachable without a network call succeeding, even

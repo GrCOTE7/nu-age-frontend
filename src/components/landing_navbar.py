@@ -2,6 +2,18 @@ import flet as ft
 
 def get_landing_appbar(page: ft.Page):
     return ft.AppBar(
+        leading=ft.Container(
+            content=ft.Button(
+                "Downloads",
+                icon=ft.Icons.DOWNLOAD_FOR_OFFLINE,
+                color=ft.Colors.ON_PRIMARY,
+                bgcolor=ft.Colors.PRIMARY,
+                on_click=lambda e: page.go("/offline")
+            ),
+            padding=ft.Padding.only(left=16),
+            alignment=ft.Alignment.CENTER_LEFT,
+        ),
+        leading_width=180,
         actions=[
             ft.TextButton("Login",
                 icon=ft.Icons.LOGIN,

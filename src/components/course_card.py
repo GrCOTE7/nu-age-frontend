@@ -7,14 +7,14 @@ def get_course_card(
     course_author: str,
     image_url: str | None = None,
     created_at: str | None = None,
-    on_enroll_click=None,
+    on_view_click=None,
 ):
     # ── cover ─────────────────────────────────────────────────────────────────
     if image_url:
         cover = ft.Container(
             height=140,
             clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
+            border_radius=ft.BorderRadius.only(top_left=32, top_right=8),
             content=ft.Image(
                 src=image_url,
                 fit=ft.BoxFit.COVER,
@@ -40,7 +40,7 @@ def get_course_card(
                         end=ft.Alignment.BOTTOM_RIGHT,
                         colors=[ft.Colors.PURPLE_200, ft.Colors.INDIGO_200]
                     ),
-            border_radius=ft.BorderRadius.only(top_left=12, top_right=12),
+            border_radius=ft.BorderRadius.only(top_left=32, top_right=8),
             alignment=ft.Alignment.CENTER,
             content=ft.Icon(ft.Icons.MENU_BOOK_ROUNDED, size=44,
                             color=ft.Colors.ON_PRIMARY),
@@ -75,8 +75,8 @@ def get_course_card(
         )
 
     # ── enroll button ─────────────────────────────────────────────────────────
-    enroll_btn = ft.ElevatedButton(
-        content=ft.Text("Enroll Now", size=13,
+    view_btn = ft.ElevatedButton(
+        content=ft.Text("View Course", size=13,
                         color=ft.Colors.ON_PRIMARY, weight=ft.FontWeight.W_600),
         bgcolor=ft.Colors.PRIMARY,
         expand=True,
@@ -85,19 +85,31 @@ def get_course_card(
             shape=ft.RoundedRectangleBorder(radius=8),
             elevation=0,
         ),
-        on_click=on_enroll_click,
+        on_click=on_view_click,
     )
+
+    def handle_hover(e):
+        e.control.scale = 1.05 if e.data == "true" else 1.0
+        e.control.shadow = ft.BoxShadow(
+            blur_radius=16 if e.data == "true" else 8,
+            color=ft.Colors.with_opacity(0.12 if e.data == "true" else 0.08, ft.Colors.ON_SURFACE),
+            offset=ft.Offset(0, 8) if e.data == "true" else ft.Offset(0, 3),
+        )
+        e.control.update()
 
     # ── card ──────────────────────────────────────────────────────────────────
     return ft.Container(
         # preserve original animation contract
         offset=ft.Offset(0, 0.1),
         animate_offset=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+        scale=1.0,
+        animate_scale=ft.Animation(300, ft.AnimationCurve.DECELERATE),
+        on_hover=handle_hover,
         tooltip="Tap on this card to view course details",
         opacity=0,
         animate_opacity=300,
         bgcolor=ft.Colors.SURFACE,
-        border_radius=12,
+        border_radius=ft.BorderRadius.only(top_left=32, bottom_right=32, top_right=8, bottom_left=8),
         shadow=ft.BoxShadow(
             blur_radius=8,
             color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE),
@@ -147,7 +159,7 @@ def get_course_card(
                             ft.Divider(height=1, color=ft.Colors.GREY_100),
 
                             # Enroll button
-                            ft.Row(controls=[enroll_btn]),
+                            ft.Row(controls=[view_btn]),
                         ],
                     ),
                 ),

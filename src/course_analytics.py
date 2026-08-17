@@ -346,7 +346,7 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
     # ─────────────────────────────────────────────────────────────────────────
     def build_main_layout():
         title         = course_data.get("name", "Untitled Course")
-        is_public     = course_data.get("public", False)
+        is_public_val = str(course_data.get("public", "false")).lower()
         is_supervised = course_data.get("supervised", False)
         category      = (course_data.get("category") or {}).get("name", "Uncategorized") \
                         if isinstance(course_data.get("category"), dict) else "Uncategorized"
@@ -357,10 +357,9 @@ async def course_analytics_view(page: ft.Page, org_id: str, course_id: str):
         lesson_count   = sum(len(m.get("lessons", [])) for m in modules) if modules else 0
         avg_prog       = avg_progress_display(students)
 
-        status_badge   = _pill(
-            "Public" if is_public else "Draft",
-            ft.Colors.GREEN_50 if is_public else ft.Colors.GREY_100,
-            ft.Colors.GREEN_700 if is_public else ft.Colors.GREY_600,
+        status_badge   = _pill("Public", ft.Colors.GREEN_50, ft.Colors.GREEN_700) if is_public_val == "true" else (
+            _pill("Organization", ft.Colors.BLUE_50, ft.Colors.BLUE_700) if is_public_val == "organisation" else
+            _pill("Draft", ft.Colors.GREY_100, ft.Colors.GREY_600)
         )
         type_badge     = _pill(
             "Instructor-Led" if is_supervised else "Automated",

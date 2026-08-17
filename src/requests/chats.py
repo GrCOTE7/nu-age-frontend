@@ -182,7 +182,7 @@ class ChatWebSocketClient:
             if self.on_disconnect_callback:
                 self.on_disconnect_callback()
 
-    async def send_message(self, channel_id: str, content: str, msg_type: str = "text") -> bool:
+    async def send_message(self, channel_id: str, content: str, msg_type: str = "text", **kwargs) -> bool:
         """Pushes data up the live pipe to the server. Returns True/False for success."""
         if not self.websocket:
             print("Cannot send: no active socket connection.")
@@ -193,6 +193,7 @@ class ChatWebSocketClient:
             "content": content,
             "type": msg_type
         }
+        payload.update(kwargs)
         try:
             await self.websocket.send(json.dumps(payload))
             return True

@@ -242,14 +242,15 @@ async def course_settings_view(page: ft.Page, course_id: str, org_id: str) -> ft
     # =========================================================
     # SECTION 6: ACCESS CONTROLS
     # =========================================================
+    public_val = str(course_data.get("public", "false")).lower()
     public_radio = ft.RadioGroup(
-        value=course_data.get("public"),
+        value=public_val,
         content=ft.Row(
             wrap=True,
             controls=[
-                ft.Radio(value=False,          label="Private",      fill_color=ft.Colors.PRIMARY),
-                ft.Radio(value="organization", label="Organization", fill_color=ft.Colors.PRIMARY),
-                ft.Radio(value=True,           label="Public",       fill_color=ft.Colors.PRIMARY),
+                ft.Radio(value="false",        label="Private",      fill_color=ft.Colors.PRIMARY),
+                ft.Radio(value="organisation", label="Organization", fill_color=ft.Colors.PRIMARY),
+                ft.Radio(value="true",         label="Public",       fill_color=ft.Colors.PRIMARY),
             ],
         ),
     )

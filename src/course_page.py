@@ -5,11 +5,33 @@ import flet as ft
 from flet_video import Video, VideoMedia
 import asyncio
 from src.components.bottom_appbar import get_bottom_appbar
-from src.requests.Courses import get_course_curriculum, mark_complete, generate_course_certificate
+from src.requests.Courses import get_course_curriculum, mark_complete, generate_course_certificate, rate_course
 
 
-async def course_learner_view(page: ft.Page, course_id: str):
-    token = await page.shared_preferences.get("auth_token")
+async def course_learner_view(
+    page: ft.Page,
+    course_id: str,
+    # NEW: optional injected data/save layer. Defaults preserve the exact
+    # existing online behavior — nothing changes for the online path.
+    # The offline entrypoint (src/offline_course_page.py) passes its own
+    # SQLite-backed versions of these two instead, and everything below
+    # this point (locking, rendering, sidebar, assessments, flashcards,
+    # etc) runs completely unmodified either way, since it only ever reads
+    # from the `course_data` dict — it has no idea whether that dict came
+    # from the network or from disk.
+    fetch_course_data=None,
+    save_progress=None,
+    # Where the back arrow should actually go. Defaults to "/courses" to
+    # preserve prior behavior for any caller that doesn't pass this
+    # explicitly. main.py's route_change computes the real value from
+    # wherever the user actually navigated from (e.g. "/offline" if they
+    # opened this course from the downloaded-courses list) — see the
+    # back_target comment at that call site for why this matters: a
+    # hardcoded "/courses" sent offline users to a protected route that
+    # bounced them straight to login, since /courses requires a token.
+    back_target: str = "/courses",
+):
+    token = None
     app_bar = get_bottom_appbar(page)
 
     # =========================================================
@@ -55,10 +77,14 @@ async def course_learner_view(page: ft.Page, course_id: str):
     # =========================================================
 
     async def api_fetch_course_data(c_id: str):
+        if fetch_course_data is not None:
+            return await fetch_course_data(c_id)
         course_data = await get_course_curriculum(token, course_id)
         return course_data
 
     async def api_save_progress(course_id: str, lesson_id: str):
+        if save_progress is not None:
+            return await save_progress(course_id, lesson_id)
         res = await mark_complete(token, course_id, lesson_id)
         return res
 
@@ -220,7 +246,6 @@ async def course_learner_view(page: ft.Page, course_id: str):
                         [
                             ft.Row(
                                 [
-                                    ft.Icon(ft.Icons.MENU_BOOK_ROUNDED, color=ft.Colors.SURFACE, size=16),
                                     sidebar_course_title,
                                 ],
                                 spacing=8,
@@ -254,7 +279,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
         leading=ft.IconButton(
             ft.Icons.ARROW_BACK_ROUNDED,
             icon_color=ft.Colors.SURFACE,
-            on_click=lambda _: page.go("/courses"),
+            on_click=lambda _: page.go(back_target),
         ),
         title=appbar_title,
         center_title=False,
@@ -337,13 +362,67 @@ async def course_learner_view(page: ft.Page, course_id: str):
     import flet_video as ftv
 
 
+    import logging
+    import os
+    from pathlib import Path
+    from urllib.parse import urlparse
+
+    logger = logging.getLogger("video_renderer")
+
+
+    def _resolve_media_uri(value: str) -> str:
+        """Guarantee the player gets something with a real URI scheme —
+        an http(s) URL untouched, or a local http://127.0.0.1 URI for local files,
+        so it behaves exactly like the online case (especially important for HLS)."""
+        scheme = urlparse(value).scheme
+        # Normal remote streaming cases bypass local handling
+        if scheme in ("http", "https"):
+            return value
+
+        # Handle local files (either passed as raw paths or file:// URIs)
+        if scheme == "file":
+            import urllib.request
+            path_str = urllib.request.url2pathname(urlparse(value).path)
+        else:
+            path_str = value
+
+        path = Path(path_str).resolve()
+        if not path.exists():
+            logger.error("Video asset missing on disk: %s", path)
+
+        try:
+            from src.local_media_server import asset_url
+            return asset_url(str(path))
+        except Exception as e:
+            logger.error("local_media_server failed: %s. Falling back to file://", e)
+            return path.as_uri()
+
+
     @register_content_renderer("video_url")
     def render_video_block(value, lesson):
-        player = ftv.Video(
+        try:
+            media_uri = _resolve_media_uri(value)
+        except Exception:
+            logger.exception("Failed to resolve media URI for lesson %s, value=%r",
+                            lesson.get("id"), value)
+            media_uri = value  # fall back, let on_error report it
+
+        def _on_error(e):
+            logger.error(
+                "Video playback error — lesson=%s value=%r resolved=%r data=%r",
+                lesson.get("id"), value, media_uri, getattr(e, "data", None),
+            )
+
+        def _on_load(e):
+            logger.info("Video loaded OK — lesson=%s resolved=%r", lesson.get("id"), media_uri)
+
+        player = Video(
             expand=True,
-            playlist=[ftv.VideoMedia(value)],
+            playlist=[VideoMedia(media_uri)],
             autoplay=True,
             volume=100,
+            on_error=_on_error,
+            on_load=_on_load,
             controls=ftv.MaterialDesktopVideoControls(
                 visible_on_mount=True,
                 display_seek_bar=True,
@@ -358,16 +437,13 @@ async def course_learner_view(page: ft.Page, course_id: str):
             border_radius=12,
             bgcolor=ft.Colors.ON_PRIMARY,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
-            content=player,  # dropped the single-child Stack wrapper
+            content=player,
         )
 
         return ft.Container(
             expand=True,
             alignment=ft.Alignment.CENTER,
-            content=ft.Container(
-                width=1000,
-                content=video_container,
-            ),
+            content=ft.Container(width=1000, content=video_container),
         )
         
     @register_content_renderer("accompanying_text")
@@ -980,10 +1056,78 @@ async def course_learner_view(page: ft.Page, course_id: str):
                         padding=ft.Padding.symmetric(vertical=10),
                     )
 
-                    def close_dialog_and_go(e=None):
-                        dialog.open = False
-                        page.go("/dashboard")
+                    rating_stars = ft.Row(alignment=ft.MainAxisAlignment.CENTER, spacing=4)
+                    for i in range(1, 6):
+                        rating_stars.controls.append(ft.IconButton(
+                            icon=ft.Icons.STAR_BORDER_ROUNDED,
+                            icon_color=ft.Colors.AMBER_400,
+                            data=i,
+                            on_click=lambda e: page.run_task(submit_rating, e.control.data)
+                        ))
+                    rating_action_container = ft.Container(
+                        content=ft.Column(
+                            [
+                                ft.Text("Rate this course:", size=14, weight=ft.FontWeight.W_600),
+                                rating_stars
+                            ],
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER, tight=True, spacing=4
+                        ),
+                        padding=ft.Padding.symmetric(vertical=10),
+                    )
+                    
+                    async def submit_rating(rating_val):
+                        for idx, star in enumerate(rating_stars.controls):
+                            star.disabled = True
+                            if idx < rating_val:
+                                star.icon = ft.Icons.STAR_ROUNDED
                         page.update()
+                        
+                        res = await rate_course(token, course_id, rating_val)
+                        if "error" not in res:
+                            rating_action_container.content = ft.Text("Thank you for your feedback!", color=ft.Colors.GREEN, size=13, weight=ft.FontWeight.W_500, text_align=ft.TextAlign.CENTER)
+                        else:
+                            rating_action_container.content = ft.Text("Failed to submit rating.", color=ft.Colors.RED, size=13, text_align=ft.TextAlign.CENTER)
+                        page.update()
+
+                    def close_dialog_and_go(e=None):
+                        # Was: dialog.open = False (stale API — should be
+                        # page.pop_dialog()) followed by a hardcoded
+                        # page.go("/dashboard"). Two problems: the stale
+                        # close call meant the dialog might not have
+                        # actually dismissed cleanly, and /dashboard is a
+                        # protected route requiring a live connection —
+                        # if certificate generation just failed (its own
+                        # error path already implies degraded/no
+                        # connectivity), this hardcoded navigation was
+                        # near-guaranteed to fail too, which is what froze
+                        # the course page UI: a failed protected
+                        # navigation with a dialog left in an inconsistent
+                        # state on top of it.
+                        #
+                        # Fixed: proper dialog close, and navigate to
+                        # back_target instead of a hardcoded route —
+                        # back_target is always somewhere this session
+                        # already successfully reached (either /courses or
+                        # /offline), so it can't fail the same way an
+                        # unrelated, unverified /dashboard hop can.
+                        page.pop_dialog()
+                        page.go(back_target)
+
+                    is_offline = back_target == "/offline"
+
+                    def close_dialog_and_go_stats(e=None):
+                        page.pop_dialog()
+                        page.go(f"/courses/{course_id}/stats")
+
+                    if not is_offline:
+                        stats_action_container = ft.ElevatedButton(
+                            content="View My Stats",
+                            icon=ft.Icons.QUERY_STATS,
+                            style=ft.ButtonStyle(bgcolor=UI_ACCENT, color=ft.Colors.SURFACE, shape=ft.RoundedRectangleBorder(radius=10), padding=ft.Padding(24, 14, 24, 14)),
+                            on_click=close_dialog_and_go_stats
+                        )
+                    else:
+                        stats_action_container = ft.Container() # Omitted offline
 
                     dialog = ft.AlertDialog(
                         modal=True,
@@ -1021,16 +1165,28 @@ async def course_learner_view(page: ft.Page, course_id: str):
                                     ft.Container(
                                         padding=ft.Padding.symmetric(horizontal=28, vertical=18),
                                         content=ft.Column(
-                                            [
-                                                ft.Container(height=18),
-                                                cert_action_container,
-                                            ],
+                                            (
+                                                [
+                                                    ft.Container(height=18),
+                                                    cert_action_container,
+                                                    ft.Divider(height=24, color=ft.Colors.OUTLINE_VARIANT),
+                                                    rating_action_container,
+                                                ]
+                                                if course_data.get('auto_certificate', True) else 
+                                                [
+                                                    ft.Container(height=18),
+                                                    rating_action_container,
+                                                ]
+                                            ),
                                             horizontal_alignment=ft.CrossAxisAlignment.STRETCH, spacing=0,
                                         ),
                                     ),
                                     ft.Container(
                                         padding=ft.Padding.only(left=28, right=28, bottom=24),
-                                        content=ft.TextButton("Return to Dashboard", style=ft.ButtonStyle(color=ft.Colors.ON_SURFACE_VARIANT), on_click=close_dialog_and_go),
+                                        content=ft.Column([
+                                            stats_action_container,
+                                            ft.TextButton("Return to Dashboard", style=ft.ButtonStyle(color=ft.Colors.ON_SURFACE_VARIANT), on_click=close_dialog_and_go),
+                                        ], horizontal_alignment=ft.CrossAxisAlignment.STRETCH, spacing=8)
                                     ),
                                 ],
                                 spacing=0, tight=True,
@@ -1116,7 +1272,8 @@ async def course_learner_view(page: ft.Page, course_id: str):
                             if cert_action_container.page: cert_action_container.update()
 
                     # 3. Kick off the generation
-                    page.run_task(attempt_cert_generation)
+                    if course_data.get('auto_certificate', True):
+                        page.run_task(attempt_cert_generation)
                     return
 
 
@@ -1576,7 +1733,8 @@ async def course_learner_view(page: ft.Page, course_id: str):
     # =========================================================
 
     async def fetch_initial_data():
-        nonlocal course_data, current_module_idx, current_lesson_idx, module_expanded_state
+        nonlocal course_data, current_module_idx, current_lesson_idx, module_expanded_state, token
+        token = await page.shared_preferences.get("auth_token")
 
         course_data = await api_fetch_course_data(course_id)
 
@@ -1642,7 +1800,7 @@ async def course_learner_view(page: ft.Page, course_id: str):
     # =========================================================
 
     return ft.View(
-        route=f"/courses/{course_id}/learn",
+        route=f"/courses/{course_id}/view",
         bgcolor=ft.Colors.ON_PRIMARY,
         padding=0,
         appbar=page_appbar,

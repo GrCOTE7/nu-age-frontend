@@ -159,6 +159,17 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
         ),
     )
 
+    def handle_hover(e):
+        e.control.scale = 1.05 if e.data == "true" else 1.0
+        e.control.shadow = ft.BoxShadow(
+            blur_radius=16 if e.data == "true" else 8,
+            color=ft.Colors.with_opacity(0.12 if e.data == "true" else 0.08, ft.Colors.ON_SURFACE),
+            offset=ft.Offset(0, 8) if e.data == "true" else ft.Offset(0, 3),
+        )
+        if on_hover:
+            on_hover(e)
+        e.control.update()
+
     # ── Outer card ────────────────────────────────────────────────────────────
     card = ft.Container(
         width=200,
@@ -166,7 +177,7 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
         bgcolor=CARD_BG,
         border_radius=14,
         scale=1.0,
-        animate_scale=ft.Animation(300, ft.AnimationCurve.EASE_OUT),
+        animate_scale=ft.Animation(300, ft.AnimationCurve.DECELERATE),
         border=ft.Border.all(1, BORDER_COLOR),
         shadow=ft.BoxShadow(
             blur_radius=8,
@@ -175,7 +186,12 @@ def get_completed_card(course_name,course_id, on_review_click, on_stats_click):
             offset=ft.Offset(0, 2),
         ),
         clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
-        on_hover=on_hover,
+        on_hover=handle_hover,
+        ink=True,
+        opacity=0,
+        offset=ft.Offset(0, 0.1),
+        animate_opacity=300,
+        animate_offset=ft.Animation(400, ft.AnimationCurve.DECELERATE),
         content=ft.Column(
             spacing=0,
             controls=[accent_strip, card_body],

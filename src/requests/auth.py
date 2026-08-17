@@ -165,3 +165,22 @@ async def verify_password(email: str, new_password: str, otp: str):
             return response.status_code, response.json()
         except Exception as e:
             return 500, {"detail": str(e)}
+
+async def refresh_access_token_request(refresh_token: str):
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"{api_url}/users/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+        return resp.status_code, resp.json()
+
+async def logout_request(refresh_token: str):
+    async with httpx.AsyncClient(timeout=10) as client:
+        try:
+            resp = await client.post(
+                f"{api_url}/users/auth/logout",
+                json={"refresh_token": refresh_token},
+            )
+            return resp.status_code
+        except httpx.RequestError:
+            return None

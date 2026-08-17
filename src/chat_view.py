@@ -20,6 +20,15 @@ from src.requests.chats import (
     leave_group_channel
 )
 
+from src.local_db import (
+    get_cached_chat_channels,
+    upsert_chat_channels,
+    get_cached_messages,
+    upsert_chat_messages
+)
+import json
+
+
 
 async def chat_view(page: ft.Page) -> ft.View:
     # ==========================================
@@ -164,6 +173,80 @@ async def chat_view(page: ft.Page) -> ft.View:
                 page.run_task(ws_client_ref[0].send_message, current_chat_id[0], "typing", "typing")
             last_typing_time[0] = now
 
+    # ==========================================
+    # POLL CREATION MODAL
+    # ==========================================
+    def open_create_poll_modal(e):
+        if not current_chat_id[0]: return
+
+        question_input = ft.TextField(label="Ask a question", border_radius=8)
+        options_col = ft.Column(spacing=10)
+        multi_switch = ft.Switch(label="Allow multiple answers", value=False, active_color=UI_ACCENT)
+        
+        def add_opt_field(e=None):
+            if len(options_col.controls) >= 10: return
+            field = ft.TextField(hint_text=f"Option {len(options_col.controls) + 1}", border_radius=8, height=45, content_padding=ft.Padding(10, 0, 10, 0))
+            options_col.controls.append(field)
+            page.update()
+
+        # Add initial two options
+        add_opt_field()
+        add_opt_field()
+
+        def submit_poll(e):
+            q = question_input.value.strip()
+            opts = [c.value.strip() for c in options_col.controls if c.value.strip()]
+            if not q or len(opts) < 2:
+                question_input.error_text = "Enter a question and at least 2 options."
+                page.update()
+                return
+
+            import json
+            meta = {
+                "options": opts,
+                "votes": {},
+                "is_multi_select": multi_switch.value
+            }
+            page.run_task(
+                ws_client_ref[0].send_message,
+                current_chat_id[0],
+                q,
+                "poll",
+                metadata_payload=meta
+            )
+            dlg.open = False
+            page.update()
+
+        dlg = ft.AlertDialog(
+            modal=True,
+            shape=ft.RoundedRectangleBorder(radius=16),
+            title=ft.Text("Create Poll", weight=ft.FontWeight.BOLD),
+            content=ft.Container(
+                width=350,
+                content=ft.Column([
+                    question_input,
+                    ft.Text("Options", weight=ft.FontWeight.BOLD),
+                    options_col,
+                    ft.TextButton("+ Add Option", on_click=add_opt_field, style=ft.ButtonStyle(color=UI_ACCENT)),
+                    multi_switch
+                ], tight=True, scroll=ft.ScrollMode.AUTO)
+            ),
+            actions=[
+                ft.TextButton("Cancel", on_click=lambda e: (setattr(dlg, "open", False), page.update())),
+                ft.FilledButton("Send Poll", style=ft.ButtonStyle(bgcolor=UI_ACCENT, color=ft.Colors.ON_PRIMARY), on_click=submit_poll)
+            ],
+            actions_padding=ft.Padding(16, 0, 16, 16)
+        )
+        page.overlay.append(dlg)
+        dlg.open = True
+        page.update()
+
+    # --- END POLL CREATION ---
+
+
+    poll_btn = ft.IconButton(ft.Icons.POLL_ROUNDED, icon_color=UI_ACCENT, tooltip="Create Poll")
+    poll_btn.on_click = open_create_poll_modal
+
     msg_input = ft.TextField(
         hint_text="Message",
         expand=True,
@@ -208,7 +291,7 @@ async def chat_view(page: ft.Page) -> ft.View:
         tokens   = [t for t in (name or "").split() if t]
         initials = "".join([t[0] for t in tokens[:2]]).upper() if tokens else "?"
 
-        is_group = channel_type in ("group", "org", "organisation", "custom")
+        is_group = channel_type != "direct"
 
         base_avatar = ft.CircleAvatar(
             content=(
@@ -505,6 +588,122 @@ async def chat_view(page: ft.Page) -> ft.View:
                 ]
             )
 
+        if msg.get("type") == "poll":
+            poll_meta = msg.get("metadata_payload") or {}
+            if isinstance(poll_meta, str):
+                import json
+                try: poll_meta = json.loads(poll_meta)
+                except Exception: poll_meta = {}
+            
+            question = msg.get("content", "Poll")
+            options = poll_meta.get("options", [])
+            votes = poll_meta.get("votes", {})
+            is_multi = poll_meta.get("is_multi_select", False)
+            poll_id = msg.get("id")
+            my_id_str = str(current_user_id[0]).strip().lower()
+
+            bubble = ft.Container(
+                bgcolor=BUBBLE_IN_BG,
+                border_radius=12,
+                padding=16,
+                width=int(page.width * 0.72) if not is_desktop[0] else int(page.width * 0.42),
+                shadow=ft.BoxShadow(blur_radius=4, color=ft.Colors.with_opacity(0.1, ft.Colors.ON_SURFACE), offset=ft.Offset(0,1)),
+            )
+
+            def build_poll_controls():
+                poll_controls = [
+                    ft.Row([ft.Icon(ft.Icons.POLL_ROUNDED, size=20, color=UI_ACCENT), ft.Text("Poll", weight=ft.FontWeight.BOLD, color=UI_ACCENT)]),
+                    ft.Text(question, size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.ON_SURFACE)
+                ]
+
+                for opt in options:
+                    opt_votes = 0
+                    for v in votes.values():
+                        if isinstance(v, list) and opt in v: opt_votes += 1
+                        elif v == opt: opt_votes += 1
+
+                    is_selected = False
+                    my_v = votes.get(my_id_str, [])
+                    if isinstance(my_v, list) and opt in my_v: is_selected = True
+                    elif my_v == opt: is_selected = True
+
+                    vote_badge = ft.Container(
+                        content=ft.Text(str(opt_votes), size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.ON_PRIMARY),
+                        bgcolor=UI_ACCENT if opt_votes > 0 else ft.Colors.GREY_400,
+                        border_radius=12,
+                        padding=ft.Padding(6, 2, 6, 2)
+                    )
+
+                    if is_multi:
+                        icon = ft.Icons.CHECK_BOX if is_selected else ft.Icons.CHECK_BOX_OUTLINE_BLANK
+                    else:
+                        icon = ft.Icons.RADIO_BUTTON_CHECKED if is_selected else ft.Icons.RADIO_BUTTON_UNCHECKED
+                    
+                    ctrl_icon = ft.Icon(icon, color=UI_ACCENT if is_selected else ft.Colors.GREY_500, size=20)
+
+                    opt_row = ft.Container(
+                        ink=True,
+                        on_click=lambda e, opt_val=opt: handle_poll_vote(opt_val),
+                        padding=ft.Padding(5, 5, 5, 5),
+                        border_radius=6,
+                        content=ft.Row([
+                            ctrl_icon,
+                            ft.Text(opt, size=14, color=ft.Colors.ON_SURFACE, expand=True),
+                            vote_badge
+                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER)
+                    )
+                    poll_controls.append(opt_row)
+                return ft.Column(poll_controls, spacing=5, tight=True)
+
+            def handle_poll_vote(option_selected):
+                my_votes = votes.get(my_id_str, [])
+                if isinstance(my_votes, str): my_votes = [my_votes]
+                
+                if is_multi:
+                    if option_selected in my_votes:
+                        my_votes.remove(option_selected)
+                    else:
+                        my_votes.append(option_selected)
+                    
+                    if not my_votes:
+                        votes.pop(my_id_str, None)
+                    else:
+                        votes[my_id_str] = my_votes
+                else:
+                    if votes.get(my_id_str) == option_selected:
+                        votes.pop(my_id_str, None)
+                    else:
+                        votes[my_id_str] = option_selected
+
+                poll_meta["votes"] = votes
+                
+                bubble.content = build_poll_controls()
+                bubble.update()
+
+                # IMMEDIATELY SAVE TO SQLITE CACHE FOR PERSISTENT OPTIMISTIC UI!
+                try:
+                    import json
+                    upsert_chat_messages(page, [{
+                        "id": str(poll_id),
+                        "channel_id": current_chat_id[0],
+                        "sender_id": msg.get("sender_id", ""),
+                        "sender_name": msg.get("sender_name", "Unknown"),
+                        "type": "poll",
+                        "content": poll_meta.get("question", "Poll"),
+                        "metadata_payload": json.dumps(poll_meta),
+                        "status": "sent"
+                    }])
+                except Exception as e:
+                    print(f"Local cache update failed: {e}")
+
+                page.run_task(ws_client_ref[0].send_message, current_chat_id[0], option_selected, "poll_vote", poll_id=poll_id)
+
+            bubble.content = build_poll_controls()
+            row = ft.Row([bubble], alignment=ft.MainAxisAlignment.CENTER)
+            row.data = str(poll_id)
+            return row
+
+
         sender_info = msg.get("sender", {})
         my_id       = str(current_user_id[0]).strip().lower()
         sender_id   = str(sender_info.get("id", "unknown")).strip().lower()
@@ -560,10 +759,12 @@ async def chat_view(page: ft.Page) -> ft.View:
         margin = ft.Margin(top=1, bottom=1, left=60 if is_me else 8, right=8 if is_me else 60)
 
         if is_me:
-            return ft.Container(
+            c = ft.Container(
                 content=ft.Row([bubble], alignment=ft.MainAxisAlignment.END),
                 margin=margin
             )
+            c.data = str(msg.get("id"))
+            return c
         else:
             sender_initials = "".join([t[0] for t in sender_name.split()[:2]]).upper()
             sender_avatar   = ft.CircleAvatar(
@@ -571,7 +772,7 @@ async def chat_view(page: ft.Page) -> ft.View:
                 bgcolor=ft.Colors.with_opacity(0.75, UI_ACCENT),
                 radius=14
             )
-            return ft.Container(
+            c = ft.Container(
                 content=ft.Row(
                     [sender_avatar, bubble],
                     alignment=ft.MainAxisAlignment.START,
@@ -580,6 +781,8 @@ async def chat_view(page: ft.Page) -> ft.View:
                 ),
                 margin=margin
             )
+            c.data = str(msg.get("id"))
+            return c
 
     # ==========================================
     # 10. TYPING INDICATOR
@@ -657,6 +860,7 @@ async def chat_view(page: ft.Page) -> ft.View:
             channels_list = res
         render_chat_list()
 
+
     async def load_active_chat(chat_id):
         if chat_load_lock[0]: return
         chat_load_lock[0] = True
@@ -685,7 +889,9 @@ async def chat_view(page: ft.Page) -> ft.View:
             _chat_online   = chat_info.get("is_online", False)
             header_actions = []
 
-            if _chat_type in ("group", "custom", "organisation"):
+            poll_btn.visible = _chat_type != "direct"
+
+            if _chat_type != "direct":
                 header_actions.append(
                     ft.IconButton(
                         ft.Icons.PERSON_ADD_ALT_1_ROUNDED,
@@ -752,6 +958,7 @@ async def chat_view(page: ft.Page) -> ft.View:
                     padding=ft.Padding(left=8, right=8, top=8, bottom=8),
                     border=ft.Border.only(top=ft.BorderSide(1, DIVIDER_COLOR)),
                     content=ft.Row([
+                        poll_btn,
                         ft.Container(
                             expand=True,
                             bgcolor=ft.Colors.ON_PRIMARY,
@@ -783,62 +990,95 @@ async def chat_view(page: ft.Page) -> ft.View:
                 )
             ], spacing=0, expand=True)
 
+
+    
             update_responsive_layout()
+
             page.update()
 
+            # --- 1. LOCAL CACHE LOAD ---
+            def _render_history(hist_list):
+                messages_listview.controls.clear()
+                seen_msg_ids.clear()
+                showing_placeholder[0] = False
+                if hist_list:
+                    current_date_label = None
+                    for msg in reversed(hist_list):
+                        if msg.get("type") in ("typing", "presence"): continue
+                        
+                        msg_id = str(msg.get("id"))
+                        if msg_id: seen_msg_ids.add(msg_id)
+
+                        msg_date = get_day_label(msg.get("created_at"))
+                        if msg_date and msg_date != current_date_label:
+                            date_pill = ft.Container(
+                                content=ft.Text(msg_date, size=11, color=ft.Colors.BLACK,
+                                                weight=ft.FontWeight.W_500),
+                                bgcolor="#D1F2EA",
+                                padding=ft.Padding(14, 5, 14, 5),
+                                border_radius=10,
+                                margin=ft.Margin(top=8, bottom=8, left=0, right=0),
+                                shadow=ft.BoxShadow(blur_radius=2, color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE), offset=ft.Offset(0, 1))
+                            )
+                            messages_listview.controls.append(
+                                ft.Row([date_pill], alignment=ft.MainAxisAlignment.CENTER)
+                            )
+                            current_date_label = msg_date
+
+                        messages_listview.controls.append(render_message_bubble(msg))
+                else:
+                    showing_placeholder[0] = True
+                    messages_listview.controls = [
+                        ft.Container(
+                            expand=True,
+                            alignment=ft.Alignment(0, 0),
+                            content=ft.Column([
+                                ft.Container(
+                                    content=ft.Text("Say Hello!", size=14,
+                                                    color=ft.Colors.ON_SURFACE54, weight=ft.FontWeight.W_500),
+                                    bgcolor="#D1F2EA",
+                                    padding=ft.Padding(18, 8, 18, 8),
+                                    border_radius=12
+                                )
+                            ], alignment=ft.MainAxisAlignment.CENTER,
+                               horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+                        )
+                    ]
+                page.update()
+
+            cached_history = get_cached_messages(page, chat_id)
+            if cached_history:
+                _render_history(cached_history)
+
+            # --- 2. NETWORK SYNC ---
             history = await get_channel_messages(token, chat_id)
 
             if isinstance(history, dict) and ("401" in str(history) or "unauthorized" in str(history).lower() or "error" in history):
                 trigger_session_expired()
                 return
 
-            messages_listview.controls.clear()
-            seen_msg_ids.clear()
-            showing_placeholder[0] = False
-
-            if isinstance(history, list) and len(history) > 0:
-                current_date_label = None
-                for msg in reversed(history):
-                    if msg.get("type") in ("typing", "presence"): continue
+            if isinstance(history, list):
+                # Format for SQLite ONLY, keep raw nested JSON for UI rendering
+                formatted_msgs = []
+                for m in history:
+                    sender_data = m.get("sender") or {}
+                    formatted_msgs.append({
+                        "id": str(m.get("id")),
+                        "channel_id": str(chat_id),
+                        "sender_id": str(sender_data.get("id", m.get("sender_id", ""))),
+                        "sender_name": str(sender_data.get("name") or "Unknown").strip() or "Unknown",
+                        "type": m.get("type", "text"),
+                        "content": m.get("content", ""),
+                        "metadata_payload": json.dumps(m.get("metadata_payload")) if m.get("metadata_payload") else None,
+                        "created_at": str(m.get("created_at", "")),
+                        "status": "sent"
+                    })
+                
+                if formatted_msgs:
+                    upsert_chat_messages(page, formatted_msgs)
                     
-                    msg_id = str(msg.get("id"))
-                    if msg_id: seen_msg_ids.add(msg_id)
+                _render_history(history)
 
-                    msg_date = get_day_label(msg.get("created_at"))
-                    if msg_date and msg_date != current_date_label:
-                        date_pill = ft.Container(
-                            content=ft.Text(msg_date, size=11, color=ft.Colors.BLACK,
-                                            weight=ft.FontWeight.W_500),
-                            bgcolor="#D1F2EA",
-                            padding=ft.Padding(14, 5, 14, 5),
-                            border_radius=10,
-                            margin=ft.Margin(top=8, bottom=8, left=0, right=0),
-                            shadow=ft.BoxShadow(blur_radius=2, color=ft.Colors.with_opacity(0.08, ft.Colors.ON_SURFACE), offset=ft.Offset(0, 1))
-                        )
-                        messages_listview.controls.append(
-                            ft.Row([date_pill], alignment=ft.MainAxisAlignment.CENTER)
-                        )
-                        current_date_label = msg_date
-
-                    messages_listview.controls.append(render_message_bubble(msg))
-            else:
-                showing_placeholder[0] = True
-                messages_listview.controls = [
-                    ft.Container(
-                        expand=True,
-                        alignment=ft.Alignment(0, 0),
-                        content=ft.Column([
-                            ft.Container(
-                                content=ft.Text("Say Hello!", size=14,
-                                                color=ft.Colors.ON_SURFACE54, weight=ft.FontWeight.W_500),
-                                bgcolor="#D1F2EA",
-                                padding=ft.Padding(18, 8, 18, 8),
-                                border_radius=12
-                            )
-                        ], alignment=ft.MainAxisAlignment.CENTER,
-                           horizontal_alignment=ft.CrossAxisAlignment.CENTER)
-                    )
-                ]
 
             if len(active_chat_header.controls) >= 3:
                 status_col = active_chat_header.controls[2]
@@ -905,6 +1145,33 @@ async def chat_view(page: ft.Page) -> ft.View:
             return
             
         msg_id_str = str(msg_id)
+        
+        # Handle live poll updates from other users
+        if msg_type == "poll_update":
+            msg_dict["type"] = "poll"
+            if incoming_channel_id == current_chat_id[0]:
+                for i, ctrl in enumerate(messages_listview.controls):
+                    if ctrl.data == msg_id_str:
+                        messages_listview.controls[i] = render_message_bubble(msg_dict)
+                        page.update()
+                        break
+            # Also update local db if cache is enabled
+            if msg_dict.get("content"):
+                import json
+                from src.local_db import upsert_chat_messages
+                upsert_chat_messages(page, [{
+                    "id": msg_id_str,
+                    "channel_id": incoming_channel_id,
+                    "sender_id": msg_dict.get("sender", {}).get("id", ""),
+                    "sender_name": msg_dict.get("sender", {}).get("name", "Unknown"),
+                    "type": "poll",
+                    "content": msg_dict.get("content", ""),
+                    "metadata_payload": json.dumps(msg_dict.get("metadata_payload")) if msg_dict.get("metadata_payload") else None,
+                    "created_at": msg_dict.get("created_at", ""),
+                    "status": "sent"
+                }])
+            return
+            
         if msg_id_str in seen_msg_ids: return
         seen_msg_ids.add(msg_id_str)
 
@@ -1048,7 +1315,7 @@ async def chat_view(page: ft.Page) -> ft.View:
                             ft.Container(width=12),
                             ft.Column([
                                 ft.Text(display_name, weight=ft.FontWeight.W_600, size=14),
-                                ft.Text(u.get("email", ""), size=12, color=ft.Colors.ON_SURFACE)
+                                ft.Text(u.get("email", ""), size=12, color=ft.Colors.ON_SURFACE38)
                             ], spacing=2, tight=True, expand=True)
                         ], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=0)
                     )

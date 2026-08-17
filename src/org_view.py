@@ -10,6 +10,7 @@ from src.requests.organisations import (
     get_joined_organisations,  
     get_organisation_courses,
 )
+from src.requests.playlists import get_org_playlists
 
 # The shared "Nu Age" account every freelance course is filed under.
 # /courses now scopes TEACHER-role requests against this org_id down to
@@ -36,7 +37,7 @@ def _section_label(text: str) -> ft.Text:
 
 async def organisations_view(page: ft.Page):
     app_bar = get_bottom_appbar(page)
-    token = await page.shared_preferences.get("auth_token")
+    token = None
 
     user_data = page.session.store.get("current_user") or {}
     role = user_data.get("role", "STUDENT").upper()
@@ -72,6 +73,9 @@ async def organisations_view(page: ft.Page):
                 f"Keys present: {list(org_data.keys())}"
             )
 
+        # Set current_org_id so that playlists and other views can use it
+        page.session.store.set("current_org_id", org_id)
+
         stats = {
             "members":  org_data.get("members", 0),
             "courses":  org_data.get("courses", 0),
@@ -99,6 +103,16 @@ async def organisations_view(page: ft.Page):
         except Exception as ex:
             print(f"Warning: could not load courses: {type(ex).__name__}: {ex}")
             courses = []
+
+        try:
+            playlists = await asyncio.wait_for(
+                get_org_playlists(token, org_id), timeout=15
+            )
+        except asyncio.TimeoutError:
+            playlists = []
+        except Exception as ex:
+            print(f"Warning: could not load playlists: {type(ex).__name__}: {ex}")
+            playlists = []
 
         # ── stat card ─────────────────────────────────────────────────────────
         def stat_card(icon_name, title, value, bg_color):
@@ -202,7 +216,7 @@ async def organisations_view(page: ft.Page):
             desc          = course.get("description", "No description available.")
             image_url     = course.get("image_url")
             course_id     = course.get("id", "")
-            course_status = course.get("public")
+            is_public_val = str(course.get("public", "false")).lower()
             course_students = course.get("total_students", 0)
 
             def badge(label, bg, fg):
@@ -249,10 +263,9 @@ async def organisations_view(page: ft.Page):
                                     ft.Row(
                                         spacing=6,
                                         controls=[
-                                            badge(
-                                                "Public" if course_status else "Draft",
-                                                ft.Colors.GREEN_50 if course_status else ft.Colors.GREY_100,
-                                                ft.Colors.GREEN_700 if course_status else ft.Colors.GREY_700,
+                                            badge("Public", ft.Colors.GREEN_50, ft.Colors.GREEN_700) if is_public_val == "true" else (
+                                                badge("Organization", ft.Colors.BLUE_50, ft.Colors.BLUE_700) if is_public_val == "organisation" else
+                                                badge("Draft", ft.Colors.GREY_100, ft.Colors.GREY_700)
                                             ),
                                             badge(f"{course_students} Enrolled", ft.Colors.BLUE_50, ft.Colors.BLUE_700),
                                         ],
@@ -434,6 +447,62 @@ async def organisations_view(page: ft.Page):
                                             else [ft.Text("No courses published yet.", color=ft.Colors.GREY_400, size=13)],
                                         ),
                                         manage_route=f"/organisations/{org_id}/courses",
+                                        action_icon=ft.Icons.ADD_ROUNDED,
+                                    ),
+                                    dashboard_section(
+                                        title="Playlists",
+                                        list_content=ft.Column(
+                                            spacing=6,
+                                            controls=[
+                                                ft.Container(
+                                                    shadow=ft.BoxShadow(blur_radius=6, color=ft.Colors.with_opacity(0.08, ft.Colors.BLACK), offset=ft.Offset(0, 2)),
+                                                    bgcolor=ft.Colors.SURFACE,
+                                                    border_radius=12,
+                                                    clip_behavior=ft.ClipBehavior.ANTI_ALIAS,
+                                                    margin=ft.Margin.only(bottom=2),
+                                                    content=ft.Row(
+                                                        spacing=0,
+                                                        controls=[
+                                                            ft.Container(
+                                                                width=90, height=130,
+                                                                bgcolor=ft.Colors.GREY_100,
+                                                                content=ft.Image(
+                                                                    src=p.get("image_url") or "https://nu-age-cdn.b-cdn.net/logos/placeholder%202.png",
+                                                                    fit=ft.BoxFit.COVER,
+                                                                ),
+                                                            ),
+                                                            ft.Container(
+                                                                expand=True,
+                                                                padding=ft.Padding.symmetric(horizontal=12, vertical=10),
+                                                                content=ft.Column(
+                                                                    spacing=4,
+                                                                    controls=[
+                                                                        ft.Row(
+                                                                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                                                                            controls=[
+                                                                                ft.Text(p.get("name", "Untitled"), size=14, weight=ft.FontWeight.W_600, color=ft.Colors.ON_SURFACE, max_lines=1, overflow=ft.TextOverflow.ELLIPSIS, expand=True),
+                                                                                ft.IconButton(
+                                                                                    ft.Icons.SETTINGS_OUTLINED,
+                                                                                    icon_color=theme_color,
+                                                                                    icon_size=18,
+                                                                                    tooltip="Playlist Settings",
+                                                                    on_click=lambda e, i=p.get("id"): page.go(f"/playlists/{i}/settings"),
+                                                                                ),
+                                                                            ],
+                                                                        ),
+                                                                        ft.Text(p.get("description", ""), size=12, color=ft.Colors.GREY_500, max_lines=2, overflow=ft.TextOverflow.ELLIPSIS),
+                                                                        ft.Container(height=4),
+                                                                    ],
+                                                                ),
+                                                            ),
+                                                        ],
+                                                    ),
+                                                ) for p in playlists
+                                            ]
+                                            if playlists
+                                            else [ft.Text("No playlists published yet.", color=ft.Colors.GREY_400, size=13)],
+                                        ),
+                                        manage_route=f"/organisations/{org_id}/playlists",
                                         action_icon=ft.Icons.ADD_ROUNDED,
                                     ),
                                 ],
@@ -881,18 +950,18 @@ async def organisations_view(page: ft.Page):
                     org_courses_cache[org_id] = []
 
             courses = org_courses_cache[org_id]
-
+            
             # ── Course card inside org detail ────────────────────────────────
             def org_course_card(course: dict):
                 title    = course.get("name", "Untitled Course")
                 desc     = course.get("description", "")
                 enrolled = course.get("total_students", 0)
-                public   = course.get("public", False)
+                public_val = str(course.get("public", "false")).lower()
                 cid      = course.get("id", "")
 
-                status_bg  = ft.Colors.GREEN_50 if public else ft.Colors.GREY_100
-                status_fg  = ft.Colors.GREEN_700 if public else ft.Colors.GREY_600
-                status_lbl = "Published" if public else "Draft"
+                status_bg  = ft.Colors.GREEN_50 if public_val == "true" else (ft.Colors.BLUE_50 if public_val == "organisation" else ft.Colors.GREY_100)
+                status_fg  = ft.Colors.GREEN_700 if public_val == "true" else (ft.Colors.BLUE_700 if public_val == "organisation" else ft.Colors.GREY_600)
+                status_lbl = "Published" if public_val == "true" else ("Organization" if public_val == "organisation" else "Draft")
 
                 return ft.Container(
                     bgcolor=ft.Colors.SURFACE,
@@ -974,7 +1043,7 @@ async def organisations_view(page: ft.Page):
                 ft.Column(
                     spacing=10,
                     scroll=ft.ScrollMode.AUTO,
-                    expand=True,
+                    expand=False,
                     controls=[org_course_card(c) for c in courses],
                 )
                 if courses
@@ -1040,16 +1109,26 @@ async def organisations_view(page: ft.Page):
                             padding=ft.Padding.symmetric(horizontal=16, vertical=14),
                             content=ft.Column(
                                 expand=True,
+                                scroll=ft.ScrollMode.AUTO,
                                 spacing=12,
                                 controls=[
                                     ft.Row(
                                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
                                         controls=[
-                                            ft.Text(
-                                                "Courses",
-                                                size=16,
-                                                weight=ft.FontWeight.W_700,
-                                                color=ft.Colors.ON_SURFACE,
+                                            ft.Text("Courses", size=16, weight=ft.FontWeight.W_700, color=ft.Colors.ON_SURFACE),
+                                            ft.ElevatedButton(
+                                                content=ft.Row(
+                                                    tight=True,
+                                                    spacing=4,
+                                                    controls=[
+                                                        ft.Icon(ft.Icons.ADD_ROUNDED, color=ft.Colors.WHITE, size=16),
+                                                        ft.Text("Create Course", color=ft.Colors.WHITE, size=12, weight=ft.FontWeight.W_600),
+                                                    ],
+                                                ),
+                                                bgcolor=theme_color,
+                                                height=34,
+                                                style=ft.ButtonStyle(shape=ft.RoundedRectangleBorder(radius=8), elevation=0),
+                                                on_click=lambda _: page.go("/create-course"),
                                             ),
                                         ],
                                     ),
@@ -1217,11 +1296,11 @@ async def organisations_view(page: ft.Page):
         def freelance_course_card(course: dict):
             title    = course.get("name", "Untitled Course")
             enrolled = course.get("total_students", 0)
-            public   = course.get("public", False)
+            public_val = str(course.get("public", "false")).lower()
             cid      = course.get("id", "")
-            status_bg  = ft.Colors.GREEN_50 if public else ft.Colors.GREY_100
-            status_fg  = ft.Colors.GREEN_700 if public else ft.Colors.GREY_600
-            status_lbl = "Published" if public else "Draft"
+            status_bg  = ft.Colors.GREEN_50 if public_val == "true" else (ft.Colors.BLUE_50 if public_val == "organisation" else ft.Colors.GREY_100)
+            status_fg  = ft.Colors.GREEN_700 if public_val == "true" else (ft.Colors.BLUE_700 if public_val == "organisation" else ft.Colors.GREY_600)
+            status_lbl = "Published" if public_val == "true" else ("Organization" if public_val == "organisation" else "Draft")
 
             return ft.Container(
                 bgcolor=ft.Colors.SURFACE,
@@ -1522,6 +1601,8 @@ async def organisations_view(page: ft.Page):
     # 6. INITIAL LOAD  (with full error safety)
     # ─────────────────────────────────────────────────────────────────────────
     async def fetch_org_status():
+        nonlocal token
+        token = await page.shared_preferences.get("auth_token")
         if role in ("TEACHER", "INSTRUCTOR"):
             try:
                 memberships = await asyncio.wait_for(

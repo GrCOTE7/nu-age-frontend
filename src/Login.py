@@ -7,6 +7,7 @@ from src.components.landing_navbar import get_landing_appbar
 from src.utils.db_manager import log_daily_activity
 import asyncio
 from src.requests.auth import send_password_reset_otp, verify_password
+from src.local_db import has_any_downloaded_courses
 
 
 def login_view(page: ft.Page):
@@ -33,29 +34,13 @@ def login_view(page: ft.Page):
         page.update()
 
     # ── dialogs ───────────────────────────────────────────────────
-    def handle_action_click(e):
+    def _dismiss_dialog(e):
+        # page.pop_dialog() only mutates dialog state — it doesn't
+        # trigger a repaint on its own, so every dismiss handler needs
+        # the follow-up page.update() or the dialog visually never
+        # closes even though it's technically no longer "open".
         page.pop_dialog()
-        page.go("/dashboard")
-
-    success_dialog = ft.AlertDialog(
-        title=ft.Row(
-            controls=[
-                ft.Icon(ft.Icons.CHECK_CIRCLE_OUTLINE_ROUNDED,
-                        color=ft.Colors.PRIMARY, size=22),
-                ft.Text("Login Successful!", size=18,
-                        weight=ft.FontWeight.W_600),
-            ],
-            spacing=8,
-        ),
-        content=ft.Text("Welcome back to Nu Age.", size=13),
-        actions=[
-            ft.TextButton(
-                "Go to Dashboard",
-                on_click=handle_action_click,
-                style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
-            )
-        ],
-    )
+        page.update()
 
     error_dialog = ft.AlertDialog(
         title=ft.Row(
@@ -70,7 +55,7 @@ def login_view(page: ft.Page):
         actions=[
             ft.TextButton(
                 "Dismiss",
-                on_click=lambda e: page.pop_dialog(),
+                on_click=_dismiss_dialog,
                 style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
             )
         ],
@@ -87,18 +72,54 @@ def login_view(page: ft.Page):
             spacing=8,
         ),
         content=ft.Text(
-            "Unable to reach the server. Please check your internet "
+            "Please check your internet "
             "connection and try again.",
             size=13,
         ),
         actions=[
             ft.TextButton(
                 "Dismiss",
-                on_click=lambda e: page.pop_dialog(),
+                on_click=_dismiss_dialog,
                 style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
             )
         ],
     )
+
+    def _go_to_offline_courses(e):
+        # Explicitly set .open = False in addition to pop_dialog() — we're
+        # about to navigate to /offline, which pushes a new View on TOP of
+        # this one rather than replacing it (see main.py's routing: /offline
+        # goes through load_view_and_report, which appends). This login
+        # view and its dialog are never torn down, just buried. If the user
+        # later taps back, this same timeout_dialog instance resurfaces
+        # exactly as it was — so its .open flag needs to already be False,
+        # not just "popped" in whatever transient sense pop_dialog tracks.
+        timeout_dialog.open = False
+        page.pop_dialog()
+        page.update()
+        page.go("/offline")
+
+    def _show_connectivity_dialog():
+        # Rebuilt each time (rather than a static module-level actions
+        # list) because whether there's anything downloaded can change
+        # between one failed login attempt and the next — e.g. a course
+        # finished downloading in a previous session. Checking fresh here
+        # keeps this in sync with local_db.py, the same source of truth
+        # main.py's error-fallback screen uses for the identical decision.
+        actions = [
+        ]
+        if has_any_downloaded_courses(page):
+            actions.insert(
+                0,
+                ft.TextButton(
+                    "View downloaded courses",
+                    icon=ft.Icons.DOWNLOAD_FOR_OFFLINE_OUTLINED,
+                    on_click=_go_to_offline_courses,
+                    style=ft.ButtonStyle(color=ft.Colors.PRIMARY),
+                ),
+            )
+        timeout_dialog.actions = actions
+        page.show_dialog(timeout_dialog)
 
     # ── validation ────────────────────────────────────────────────
     def validate_inputs(e):
@@ -135,8 +156,9 @@ def login_view(page: ft.Page):
             if status == 200:
                 token = data.get("access_token")
                 await page.shared_preferences.set("auth_token", token)
+                await page.shared_preferences.set("refresh_token", data["refresh_token"])
                 log_daily_activity()
-                page.show_dialog(success_dialog)
+                page.go("/dashboard")
 
             elif status == 404:
                 set_error(
@@ -153,6 +175,16 @@ def login_view(page: ft.Page):
                     "before trying again."
                 )
 
+            elif status in (503, 504):
+                # login_request() itself already catches connectivity
+                # failures (ReadTimeout, RequestError) and returns these
+                # as status codes rather than raising — so THIS branch,
+                # not the except blocks below, is where a dead connection
+                # actually surfaces. The except branches below only catch
+                # asyncio.wait_for's own outer timeout or something truly
+                # unexpected escaping login_request entirely.
+                _show_connectivity_dialog()
+
             elif status is not None:
                 custom_message.value = (
                     f"Unexpected error, {data["detail"]} "
@@ -160,9 +192,22 @@ def login_view(page: ft.Page):
                 page.show_dialog(error_dialog)
 
         except asyncio.TimeoutError:
-            page.show_dialog(timeout_dialog)
+            # login_request() has its own internal 15s timeout and always
+            # catches httpx.ReadTimeout itself (returning 504, not
+            # raising) — so this outer asyncio.wait_for timeout should
+            # essentially never fire in practice; the two timeouts race
+            # and login_request's internal one almost always wins.
+            # Kept as a safety net in case that internal handling ever
+            # changes or a future call site drops the wrapping.
+            _show_connectivity_dialog()
 
         except Exception as ex:
+            # login_request() already catches httpx.RequestError/ReadTimeout
+            # internally, so anything reaching here is something it didn't
+            # anticipate — genuinely unexpected, not a plain dead-connection
+            # case. Route to the generic error dialog rather than the
+            # offline-courses one, since "go check your downloads" isn't
+            # necessarily the right suggestion for an unknown failure mode.
             custom_message.value = (
                 "Something went wrong while connecting to the server. "
                 f"Detail: {type(ex).__name__}."
@@ -201,6 +246,7 @@ def login_view(page: ft.Page):
         password=True,
         can_reveal_password=True,
         expand=True,
+        on_submit=handle_submit,
     )
 
     # ── submit button ─────────────────────────────────────────────

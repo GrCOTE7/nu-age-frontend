@@ -1,16 +1,17 @@
 import flet as ft
 from src.components.bottom_appbar import get_bottom_appbar
 from src.requests.auth import get_member_profile
+import asyncio
 
 async def member_profile_view(page: ft.Page, identifier: str):
 
     # ── Palette ───────────────────────────────────────────────────────────────
-    PAGE_BG       = ft.Colors.ON_PRIMARY    # Adapts to your dark/light background
-    CARD_BG       = ft.Colors.SURFACE         # Pulls #FAFAFA in Light, #121212 in Dark
-    LABEL_COLOR   = ft.Colors.ON_SURFACE_VARIANT # Native muted text color
-    VALUE_COLOR   = ft.Colors.ON_SURFACE        # Pulls #1A1A1A in Light, #E8E8E8 in Dark
-    DIVIDER_CLR   = ft.Colors.OUTLINE_VARIANT   # Native subtle divider color
-    ICON_BG       = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY) # Keep this! PRIMARY is already adaptive.
+    PAGE_BG       = ft.Colors.ON_PRIMARY
+    CARD_BG       = ft.Colors.SURFACE
+    LABEL_COLOR   = ft.Colors.ON_SURFACE_VARIANT
+    VALUE_COLOR   = ft.Colors.ON_SURFACE
+    DIVIDER_CLR   = ft.Colors.OUTLINE_VARIANT
+    ICON_BG       = ft.Colors.with_opacity(0.08, ft.Colors.PRIMARY)
 
     # ── Initial Loading Socket ────────────────────────────────────────────────
     content_socket = ft.Container(
@@ -22,6 +23,7 @@ async def member_profile_view(page: ft.Page, identifier: str):
             if len(page.views) > 1:
                 page.views.pop()
                 page.update()
+                
     # ── Async Data Fetcher & Renderer ─────────────────────────────────────────
     async def load_profile():
         token = await page.shared_preferences.get("auth_token")
@@ -48,6 +50,9 @@ async def member_profile_view(page: ft.Page, identifier: str):
         role       = user_data.get("role", "member")
         university = user_data.get("university")
         streak     = user_data.get("streak", 0)
+        
+        active_count = user_data.get("active_count", 0)
+        finished_count = user_data.get("finished_count", 0)
 
         initials = "".join([n[0] for n in full_name.split()[:2]]).upper() if full_name else "?"
 
@@ -120,6 +125,64 @@ async def member_profile_view(page: ft.Page, identifier: str):
             )
         ])
 
+        # ── Learning Stats (Grid) ─────────────────────────────────────────────
+        def handle_stat_hover(e):
+            e.control.scale = 1.05 if e.data == "true" else 1.0
+            e.control.shadow = ft.BoxShadow(
+                blur_radius=16 if e.data == "true" else 6,
+                color=ft.Colors.with_opacity(0.12 if e.data == "true" else 0.05, ft.Colors.BLACK),
+                offset=ft.Offset(0, 6) if e.data == "true" else ft.Offset(0, 2),
+            )
+            e.control.update()
+
+        def stat_card(icon, color, value, label, delay):
+            return ft.Container(
+                expand=True,
+                bgcolor=CARD_BG,
+                border_radius=16,
+                padding=ft.Padding.all(16),
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.06, ft.Colors.BLACK)),
+                shadow=ft.BoxShadow(blur_radius=6, color=ft.Colors.with_opacity(0.05, ft.Colors.BLACK), offset=ft.Offset(0, 2)),
+                ink=True,
+                scale=1.0,
+                animate_scale=ft.Animation(300, ft.AnimationCurve.DECELERATE),
+                on_hover=handle_stat_hover,
+                opacity=0,
+                offset=ft.Offset(0, 0.2),
+                animate_opacity=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+                animate_offset=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+                data=delay, # Store delay for the animation loop
+                content=ft.Column(
+                    spacing=8,
+                    horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                    controls=[
+                        ft.Container(
+                            width=40, height=40, border_radius=20,
+                            bgcolor=ft.Colors.with_opacity(0.1, color),
+                            alignment=ft.Alignment.CENTER,
+                            content=ft.Icon(icon, color=color, size=20)
+                        ),
+                        ft.Column(
+                            spacing=2,
+                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                            controls=[
+                                ft.Text(str(value), size=18, weight=ft.FontWeight.BOLD, color=VALUE_COLOR),
+                                ft.Text(label, size=10, weight=ft.FontWeight.W_600, color=LABEL_COLOR, text_align=ft.TextAlign.CENTER)
+                            ]
+                        )
+                    ]
+                )
+            )
+
+        streak_card = stat_card(ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, ft.Colors.ORANGE_500, streak, "Day Streak", 0.0)
+        active_card = stat_card(ft.Icons.LIBRARY_BOOKS_ROUNDED, ft.Colors.INDIGO_500, active_count, "Enrolled", 0.1)
+        completed_card = stat_card(ft.Icons.EMOJI_EVENTS_ROUNDED, ft.Colors.GREEN_500, finished_count, "Completed", 0.2)
+        
+        stats_row = ft.Row(
+            spacing=12,
+            controls=[streak_card, active_card, completed_card]
+        )
+
         # ── Dynamic Info Card ─────────────────────────────────────────────────
         def info_row(icon, label, value, is_last=False):
             return ft.Column([
@@ -154,8 +217,6 @@ async def member_profile_view(page: ft.Page, identifier: str):
         # Inject optional fields
         if university:
             rows_data.append((ft.Icons.ACCOUNT_BALANCE_ROUNDED, "University", university))
-        if streak and int(streak) > 0:
-            rows_data.append((ft.Icons.LOCAL_FIRE_DEPARTMENT_ROUNDED, "Learning Streak", f"{streak} day" if streak ==1 else f"{streak} days"))
 
         row_controls = []
         for index, row_info in enumerate(rows_data):
@@ -170,14 +231,17 @@ async def member_profile_view(page: ft.Page, identifier: str):
             content=ft.Column(row_controls, spacing=0, tight=True)
         )
 
+        def section_label(text):
+            return ft.Text(text.upper(), size=11, weight=ft.FontWeight.W_700, color=LABEL_COLOR)
+            
         # ── Body Assembly ─────────────────────────────────────────────────────
         body = ft.Container(
             padding=ft.Padding(left=20, right=20, top=24, bottom=24),
             content=ft.Column(
-                spacing=20,
+                spacing=24,
                 controls=[
-                    ft.Text("USER DETAILS", size=11, weight=ft.FontWeight.W_700, color=LABEL_COLOR),
-                    info_card,
+                    ft.Column(spacing=12, controls=[section_label("Learning Stats"), stats_row]),
+                    ft.Column(spacing=12, controls=[section_label("User Details"), info_card]),
                 ]
             )
         )
@@ -190,6 +254,13 @@ async def member_profile_view(page: ft.Page, identifier: str):
             controls=[header_stack, body]
         )
         page.update()
+        
+        # Trigger animations for stat cards stagger-style
+        for stat in [streak_card, active_card, completed_card]:
+            await asyncio.sleep(stat.data) # delay
+            stat.opacity = 1
+            stat.offset = ft.Offset(0, 0)
+            page.update()
 
     # ── Boot ──────────────────────────────────────────────────────────────────
     page.run_task(load_profile)
@@ -200,7 +271,9 @@ async def member_profile_view(page: ft.Page, identifier: str):
         padding=0,
         bottom_appbar=get_bottom_appbar(page),
         controls=[
-                content_socket
-            
+            ft.SafeArea(
+                expand=True,
+                content=content_socket
+            )
         ]
     )

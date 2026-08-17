@@ -18,7 +18,8 @@ def get_bottom_appbar(page: ft.Page):
         label_text = route.strip("/").capitalize()
         if label_text == "Dashboard" or not label_text:
             label_text = "Home"
-
+        if route == "/courses":
+            label_text = "Learn"
         return ft.Column(
             spacing=0, # Keeps Icon and Text tightly packed
             tight=True, 
@@ -60,7 +61,7 @@ def get_bottom_appbar(page: ft.Page):
     nav_controls = [
         nav_item(ft.Icons.HOME_ROUNDED, "/dashboard", current_route == "/dashboard"),
         nav_item(ft.Icons.SEND_ROUNDED, "/nu-chat", current_route == "/nu-chat", is_rotated=True),
-        nav_item(ft.Icons.LIBRARY_BOOKS_ROUNDED, "/courses", current_route == "/courses" or current_route.startswith("/courses/")),
+        nav_item(ft.Icons.SCHOOL_ROUNDED, "/courses", current_route == "/courses" or current_route.startswith("/courses/")),
     ]
 
     if role in ["ADMIN", "TEACHER"]:

@@ -5,7 +5,7 @@ from src.Login import login_view
 from src.course_analytics import course_analytics_view
 from src.signup import Signup_view
 from src.dashboard import dashboard_view
-from src.requests.auth import get_current_user_request
+from src.requests.auth import get_current_user_request, refresh_access_token_request
 from src.courses import courses_view
 from src.course_view import course_details_view
 from src.profile import profile_view
@@ -22,6 +22,11 @@ from src.member_profile import member_profile_view
 from src.course_stats import course_stats_view
 from src.member_invite_view import member_invite_view
 from src.invite_members import invite_members_view
+from src.offline_courses_view import offline_courses_view
+from src.offline_course_page import offline_course_learner_view
+from src.download_manager import is_course_downloaded
+from src.progress_sync import sync_offline_progress
+from src.local_db import get_local_db, has_any_downloaded_courses
 import os
 
 
@@ -37,12 +42,18 @@ import os
 # anywhere without needing page/closures.
 #
 # There are three KINDS of failure anywhere in this app:
-#   - CONNECTIVITY: the request never got a response at all (timeout,
-#     DNS failure, connection refused, offline, etc). A real "check your
-#     wifi" situation.
-#   - SERVER: the request reached the server and got back an error
-#     status (5xx). Not the user's network — the backend/infra is
-#     unhappy. A 503 specifically means "server said it's not ready".
+#   - CONNECTIVITY: the request never got a real response — timeout, DNS
+#     failure, connection refused, offline, etc. Also includes 503/504
+#     specifically, because src/requests/auth.py's own functions (see
+#     get_current_user_request, login_request) catch httpx.RequestError/
+#     ReadTimeout internally and RETURN these codes rather than raising —
+#     used for both "couldn't reach the server at all" AND "server/DB is
+#     cold-starting". We deliberately don't try to split those two apart:
+#     from the user's seat, both mean "can't get through right now", so
+#     both get the same treatment (including the offline-courses button).
+#   - SERVER: the request reached the server and got back a DIFFERENT
+#     error status (500, 422, etc). Not the user's network — the backend
+#     itself is unhappy about something once actually reached.
 #   - BUG: the code itself raised something like TypeError/KeyError/
 #     IndexError/AttributeError while handling a response that DID come
 #     back successfully (e.g. `data["key"]` where `data` turned out to be
@@ -55,9 +66,22 @@ import os
 
 def classify_failure(ex: Exception = None, status: int = None) -> str:
     """Returns 'connectivity', 'server', or 'bug'."""
+    if status in (503, 504):
+        # IMPORTANT: in this codebase, 503/504 don't necessarily mean the
+        # server responded — src/requests/auth.py's own functions (see
+        # get_current_user_request, login_request) catch httpx.RequestError
+        # and httpx.ReadTimeout internally and RETURN these codes as a
+        # stand-in for "couldn't reach the server at all" / "timed out
+        # waiting", rather than letting the exception propagate. Treating
+        # every non-None status as "server" (the old behavior) meant a
+        # pure connectivity failure — no data connection, DNS failure,
+        # dead network — got mislabeled as "something went wrong on our
+        # end" and never triggered the offline-courses escape hatch, even
+        # though the actual server was never contacted.
+        return "connectivity"
     if status is not None:
-        # We got an HTTP response at all, so the connection itself is
-        # fine — this is the server's problem (5xx etc).
+        # Any other status means we genuinely got an HTTP response, so
+        # the connection itself is fine — this is the server's problem.
         return "server"
     if isinstance(ex, (TypeError, KeyError, IndexError, AttributeError, ValueError)):
         # These exception types almost never come from a dead connection
@@ -103,7 +127,54 @@ def failure_copy(kind: str, ex: Exception = None, status: int = None) -> dict:
     }
 
 
+# ─────────────────────────────────────────────
+# REFRESH TOKEN HELPER
+# ─────────────────────────────────────────────
+#
+# Attempts to use the stored refresh token to get a new access token.
+# Module-level (not nested in main()) so both route_change and
+# on_window_event can call it without duplicating logic — same reasoning
+# as classify_failure/failure_copy above.
+#
+# On success: overwrites BOTH stored tokens and returns True. The refresh
+# token MUST be overwritten every call — the backend rotates it on every
+# use (see auth.py), and reusing an old one trips reuse-detection and logs
+# the user out of every device.
+#
+# On failure: returns False and leaves storage untouched. This covers two
+# different situations the caller may want to distinguish:
+#   - network failure while attempting the refresh (not a dead session)
+#   - the refresh token itself is dead: expired, revoked, or already used
+# Both currently collapse to False here; callers that need to tell these
+# apart check whether a refresh_token is still present in storage afterward
+# (still present + refresh failed == token dead OR network blip during the
+# call; absent == never had one). See route_change's 401/403 branch.
+async def try_refresh_token(page: ft.Page) -> bool:
+    refresh_token = await page.shared_preferences.get("refresh_token")
+    if not refresh_token:
+        return False
+
+    try:
+        status, data = await refresh_access_token_request(refresh_token)
+    except Exception:
+        # Network failure during refresh attempt — NOT a dead session.
+        return False
+
+    if status != 200:
+        # Refresh token itself is dead (expired / revoked / reused).
+        return False
+
+    await page.shared_preferences.set("auth_token", data["access_token"])
+    await page.shared_preferences.set("refresh_token", data["refresh_token"])
+    return True
+
+
 async def main(page: ft.Page):
+    from src.local_db import init_local_db
+    from src.download_manager import init_download_manager
+    await init_local_db(page)
+    await init_download_manager(page)
+
     async def keep_alive():
         while True:
             await asyncio.sleep(30)  # Wait 30 seconds
@@ -123,9 +194,23 @@ async def main(page: ft.Page):
     def view_pop(view):
         # Prevent crashing if there's only one page left
         if len(page.views) > 1:
+            # BUG FIX: if a dialog was opened on the view *underneath* the
+            # one being popped (e.g. login's connectivity dialog, before
+            # navigating to /offline via "View downloaded courses"),
+            # page.pop_dialog()'s bookkeeping can end up out of sync with
+            # which View is actually on screen once we come back via the
+            # back arrow — the dialog can resurface stuck open, with dead
+            # handlers and no scrim-tap-to-dismiss. Force-close anything
+            # left open on page.overlay here, unconditionally, before we
+            # even look at what's underneath, so the revealed view never
+            # resurfaces with a stuck dialog regardless of ordering.
+            for ctrl in list(page.overlay):
+                if isinstance(ctrl, ft.AlertDialog):
+                    ctrl.open = False
             page.views.pop()             # Remove the current view from the stack
             top_view = page.views[-1]    # Look at the view underneath it
             page.go(top_view.route)      # Navigate to that route
+            page.update()
 
     # 2. Attach it to the page event
     page.on_view_pop = view_pop
@@ -260,6 +345,30 @@ async def main(page: ft.Page):
     # SKELETON LOADING HELPERS
     # ─────────────────────────────────────────────
 
+    def _has_any_downloaded_courses() -> bool:
+        # Thin wrapper around the shared check in local_db.py — kept as a
+        # local name here since _error_fallback_view already calls it by
+        # this name, but the actual query lives in one place (local_db.py)
+        # so main.py and Login.py can't drift out of sync on what counts
+        # as "something to send this person offline to".
+        return has_any_downloaded_courses(page)
+
+    def _view_offline_courses_button() -> ft.Control:
+        def go_offline(e):
+            page.go("/offline")
+
+        return ft.ElevatedButton(
+            "Downloads",
+            icon=ft.Icons.DOWNLOAD_FOR_OFFLINE,
+            color=ft.Colors.PRIMARY,
+            bgcolor=ft.Colors.ON_PRIMARY,
+            on_click=go_offline,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=8),
+                padding=ft.Padding(left=20, top=12, right=20, bottom=12),
+            )
+        )
+
     def _error_fallback_view(route: str, ex: Exception, status: int = None) -> ft.View:
         """A visible error screen used whenever a view fails to load —
         whether it raised an exception or silently returned nothing. Ensures
@@ -307,24 +416,56 @@ async def main(page: ft.Page):
         def toggle_details(e):
             details_container.visible = not details_container.visible
             toggle_button.text = "Hide details" if details_container.visible else "Show details"
-            page.update()
+            details_container.update()
+            toggle_button.update()
 
         toggle_button = ft.TextButton("Show details", on_click=toggle_details)
+
+        # Centralized offline escape hatch: only offered when the failure
+        # is genuinely a connectivity problem (not a 5xx or a code bug —
+        # those aren't fixed by going offline) AND there's actually
+        # something downloaded to send the person to. Covers exactly the
+        # case you flagged: cold app open, offline, with a token that
+        # might still be perfectly valid — previously this screen was a
+        # dead end even when local course content existed.
+        offer_offline = kind == "connectivity" and _has_any_downloaded_courses()
+
+        primary_actions = [
+            ft.FilledButton(
+                "Retry",
+                icon=ft.Icons.REFRESH,
+                on_click=retry,
+                style=ft.ButtonStyle(
+                    shape=ft.RoundedRectangleBorder(radius=8),
+                    padding=ft.Padding(left=20, top=12, right=20, bottom=12),
+                )
+            )
+        ]
+        
+        if offer_offline:
+            primary_actions.append(_view_offline_courses_button())
+            
+        action_row = ft.Row(
+            primary_actions,
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=16,
+        )
 
         return ft.View(
     route=route,
     controls=[
         ft.Column(
             [
-                ft.Icon(copy["icon"], color=ft.Colors.ERROR, size=40),
-                ft.Text(copy["dialog_title"], size=16, weight=ft.FontWeight.BOLD),
+                ft.Icon(copy["icon"], color=ft.Colors.ERROR, size=48),
+                ft.Text(copy["dialog_title"], size=18, weight=ft.FontWeight.BOLD),
                 ft.Text(
                     copy["dialog_message"],
-                    size=13,
+                    size=14,
                     color=ft.Colors.OUTLINE,
                     text_align=ft.TextAlign.CENTER,
                 ),
-                ft.FilledButton("Retry", on_click=retry),
+                ft.Container(height=4),
+                action_row,
                 toggle_button,
                 details_container,
             ],
@@ -639,52 +780,32 @@ async def main(page: ft.Page):
 
 
     def _layout_org_admin_dashboard():
-        """Mirrors /organisations (admin view): green banner with avatar
-        + org name + contact rows, a row of colored stat pills, then
-        two side-by-side list panels (Members / Courses)."""
-        banner = ft.Column(
-            [
-                shimmer_box(radius=8, height=16, width=120, expand= True),
-                ft.Container(height=8),
-                shimmer_box(radius=40, width=72, height=72, expand=True),
-                shimmer_box(radius=6, height=16, width=100, expand=True),
-                shimmer_box(radius=6, height=10, width=140,expand=True),
-            ],
-            spacing=10,
+        """Mirrors /organisations (admin view): hero cover image,
+        circular org avatar overlapping, title, count chips, tab row,
+        then a list of cards."""
+        # Cover image (200px tall)
+        cover = shimmer_box(radius=0, height=200, expand=True)
+        # Org avatar (overlapping: negative top margin if possible, but in skeleton we just place it)
+        avatar = ft.Container(content=shimmer_box(radius=50, width=100, height=100), margin=ft.Margin.only(top=-50, left=20))
+        # Title
+        title = ft.Container(content=shimmer_box(radius=6, height=24, width=200), margin=ft.Margin.only(left=20, top=10))
+        # Count chips
+        counts = ft.Container(
+            content=ft.Row([shimmer_box(radius=16, height=32, width=100), shimmer_box(radius=16, height=32, width=100)], spacing=10),
+            margin=ft.Margin.only(left=20, top=10)
         )
-
-        stat_pills = ft.Row(
-            [shimmer_box(radius=14, height=64) for _ in range(4)],
-            spacing=10,
+        # Tabs
+        tabs = ft.Container(
+            content=ft.Row([shimmer_box(radius=18, height=36, width=90) for _ in range(4)], spacing=10),
+            margin=ft.Margin.only(left=20, top=20, bottom=20)
         )
+        # Cards (e.g. Dashboard cards)
+        cards = ft.Column([shimmer_box(radius=16, height=140, expand=True) for _ in range(3)], spacing=16)
 
-        def list_panel():
-            return _section_bg(
-                ft.Column(
-                    [
-                        _section_label(),
-                        ft.Container(height=8),
-                        ft.Column(
-                            [ft.Row([shimmer_box(radius=18, width=36, height=36),
-                                     shimmer_box(radius=6, height=12, width=110)], spacing=10)
-                             for _ in range(3)],
-                            spacing=16,
-                        ),
-                    ],
-                    spacing=0,
-                    expand=True,
-                ),
-                padding=16,
-                expand=True,
-            )
-
-        panels = ft.Row([list_panel(), list_panel()], spacing=20, expand=True)
-
-        return ft.Column(
-            controls=[banner, stat_pills, ft.Container(content=panels, expand=True, padding=ft.Padding.only(top=8)),
-                      _bottom_navbar()],
-            spacing=18,
+        return ft.ListView(
+            controls=[cover, avatar, title, counts, tabs, ft.Container(content=cards, padding=20)],
             expand=True,
+            padding=0,
         )
 
     def _layout_profile():
@@ -737,10 +858,8 @@ async def main(page: ft.Page):
 
     def _layout_network():
         """Mirrors /network: dark header with back arrow + title, a tab
-        row (My Network/Requests/Discover), a search bar, then a dense
-        grid of smaller solid person-card silhouettes — 3 per row rather
-        than 2, since the real cards are compact and fill the row more
-        tightly than a wide 2-col grid."""
+        row (My Network/Requests/Discover), a search bar, then a vertical 
+        list of user profile rows (avatar, name column, action buttons)."""
         header = ft.Row(
             [shimmer_box(radius=8, width=24, height=24), shimmer_box(radius=6, height=18, width=100)],
             spacing=14,
@@ -751,30 +870,30 @@ async def main(page: ft.Page):
              shimmer_box(radius=6, height=14, width=60)],
             spacing=20,
         )
-        search = shimmer_box(radius=10, height=42)
+        search = shimmer_box(radius=10, height=42, expand=True)
 
-        def person_card():
-            # One solid block per card — smaller and denser than the
-            # course cards, matching the real network card's compact
-            # gradient-banner-plus-name proportions. expand=True is
-            # required since this box has a fixed height (so
-            # shimmer_box() won't auto-expand it) and it needs to fill
-            # its slot in the row rather than collapse to near-zero width.
-            box = shimmer_box(radius=12, height=130)
-            box.expand = True
-            return box
+        def user_row():
+            return ft.Row(
+                [
+                    shimmer_box(radius=24, width=48, height=48),
+                    ft.Column([shimmer_box(radius=6, height=14, width=120), shimmer_box(radius=6, height=10, width=80)], spacing=4, expand=True),
+                    ft.Row([shimmer_box(radius=16, width=40, height=32), shimmer_box(radius=16, width=40, height=32)], spacing=8)
+                ],
+                spacing=12,
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            )
 
-        grid = ft.Column(
-            [ft.Row([person_card(), person_card(), person_card()], spacing=10, expand=True) for _ in range(3)],
-            spacing=10,
+        list_view = ft.Column(
+            [user_row() for _ in range(6)],
+            spacing=16,
             expand=True,
         )
 
         return ft.Column(
             controls=[
-                shimmer_box(radius=16, height=64),
+                shimmer_box(radius=16, height=64, expand=True),
                 tabs, search,
-                ft.Container(content=grid, expand=True, padding=ft.Padding.only(top=8)),
+                ft.Container(content=list_view, expand=True, padding=ft.Padding.only(top=8)),
                 _bottom_navbar(),
             ],
             spacing=16,
@@ -788,33 +907,32 @@ async def main(page: ft.Page):
         buttons)."""
         banner = ft.Row(
             [
-                ft.Column([shimmer_box(radius=6, height=20, width=160, expand= True),
-                           shimmer_box(radius=6, height=10, width=70, expand = True)], spacing=8),
-                shimmer_box(radius=20, height=36, width=110, expand=True),
+                ft.Column([shimmer_box(radius=6, height=20, width=160),
+                           shimmer_box(radius=6, height=10, width=70)], spacing=8),
+                shimmer_box(radius=20, height=36, width=110),
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
-        banner_container = ft.Container(content=banner, bgcolor=None, height=90)
+        banner_container = ft.Container(content=banner, bgcolor=None, height=90, expand=True)
 
         def lib_card():
-            btn_left = shimmer_box(radius=18, height=34, expand = True)
-            btn_left.expand = True
+            btn_left = shimmer_box(radius=18, height=34, expand=True)
             btn_right = shimmer_box(radius=18, height=34, expand=True)
-            btn_right.expand = True
             return ft.Column(
                 [
                     shimmer_box(radius=12, height=110, expand=True),
-                    ft.Row([shimmer_box(radius=20, width=44, height=18, expand=True),
-                            shimmer_box(radius=20, width=64, height=18, expand=True)], spacing=6),
+                    ft.Row([shimmer_box(radius=20, width=44, height=18),
+                            shimmer_box(radius=20, width=64, height=18)], spacing=6),
                     shimmer_box(radius=6, height=14, expand=True),
-                    shimmer_box(radius=6, height=9, width=180, expand=True),
+                    shimmer_box(radius=6, height=9, width=180),
                     ft.Row([btn_left, btn_right], spacing=8),
                 ],
                 spacing=8,
+                expand=True
             )
 
         grid = ft.Column(
-            [ft.Row([lib_card(), lib_card()], spacing=14)
+            [ft.Row([lib_card(), lib_card()], spacing=14, expand=True)
              for _ in range(2)],
             spacing=18,
             expand=True,
@@ -824,6 +942,53 @@ async def main(page: ft.Page):
             controls=[banner_container, ft.Container(content=grid, expand=True), _bottom_navbar()],
             spacing=12,
             expand=True,
+        )
+
+    def _layout_self_study():
+        """Mirrors the Self Study Hub: top app bar, limit/status pill chips,
+        a secondary tab row, and a vertical list of material cards."""
+        header = ft.Row(
+            [shimmer_box(radius=8, width=24, height=24), shimmer_box(radius=6, height=18, width=120)],
+            spacing=14,
+        )
+        limit_chips = ft.Row(
+            [shimmer_box(radius=12, height=24, expand=True) for _ in range(3)],
+            spacing=8
+        )
+        tabs = ft.Row(
+            [shimmer_box(radius=16, height=32, width=80) for _ in range(4)],
+            spacing=12
+        )
+        def material_card():
+            return ft.Container(
+                content=ft.Row([
+                    shimmer_box(radius=12, width=48, height=48),
+                    ft.Column([shimmer_box(radius=6, height=14, width=150), shimmer_box(radius=6, height=10, width=90)], spacing=4, expand=True),
+                    shimmer_box(radius=20, width=40, height=40)
+                ], spacing=12),
+                padding=12,
+                border_radius=12,
+                bgcolor=ft.Colors.with_opacity(0.04, ft.Colors.ON_PRIMARY)
+            )
+        
+        list_view = ft.Column(
+            [material_card() for _ in range(5)],
+            spacing=12,
+            expand=True
+        )
+
+        return ft.Column(
+            controls=[
+                header,
+                ft.Container(height=8),
+                limit_chips,
+                ft.Container(height=8),
+                tabs,
+                ft.Container(height=16),
+                list_view
+            ],
+            spacing=0,
+            expand=True
         )
 
     def _layout_course_builder():
@@ -889,6 +1054,47 @@ async def main(page: ft.Page):
             expand=True,
         )
 
+    def _layout_analytics():
+        """Mirrors analytics/stats dashboards: small metric cards row,
+        then large chart blocks."""
+        metrics_row = ft.Row([shimmer_box(radius=12, height=100, expand=True) for _ in range(2)], spacing=16)
+        chart_block1 = shimmer_box(radius=16, height=220, expand=True)
+        chart_block2 = shimmer_box(radius=16, height=220, expand=True)
+        return ft.Column([metrics_row, ft.Container(height=16), chart_block1, ft.Container(height=16), chart_block2], expand=True)
+
+    def _layout_settings():
+        """Mirrors settings pages: a list of toggle/input rows."""
+        def setting_row():
+            return ft.Row([
+                shimmer_box(radius=6, height=16, width=160),
+                shimmer_box(radius=12, height=24, width=44)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+        return ft.Column([setting_row(), ft.Container(height=20)] * 6, expand=True)
+
+    def _layout_offline():
+        """Mirrors the offline downloaded courses list."""
+        def offline_card():
+            return ft.Container(
+                content=ft.Row([
+                    ft.Column([shimmer_box(radius=6, height=16, width=180), shimmer_box(radius=6, height=12, width=80)], expand=True, spacing=8),
+                    shimmer_box(radius=18, height=36, width=80)
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                padding=16,
+                border=ft.Border.all(1, ft.Colors.with_opacity(0.08, ft.Colors.ON_PRIMARY)),
+                border_radius=14,
+                margin=ft.Margin.only(bottom=12)
+            )
+        return ft.Column([offline_card() for _ in range(5)], expand=True)
+
+    def _layout_course_details():
+        """Mirrors a course or playlist details page: hero banner with image/title,
+        then description blocks and an enroll button."""
+        hero = shimmer_box(radius=16, height=200, expand=True)
+        title = shimmer_box(radius=6, height=24, width=240)
+        desc_lines = ft.Column([shimmer_box(radius=6, height=14, expand=True) for _ in range(4)])
+        button = shimmer_box(radius=24, height=48, expand=True)
+        return ft.Column([hero, ft.Container(height=16), title, ft.Container(height=16), desc_lines, ft.Container(height=24), button], expand=True)
+
     # ── Route → layout registry ─────────────────────────────────
     # Add/re-map routes here; nothing else needs to change. Exact
     # matches first, then prefix matches for parametrized routes.
@@ -899,26 +1105,29 @@ async def main(page: ft.Page):
         "/nu-chat": _layout_chat_list,
         "/courses": _layout_course_grid,
         "/organisations": _layout_org_admin_dashboard,
-        "/self-study": _layout_course_grid,
+        "/self-study": _layout_self_study,
         "/profile": _layout_profile,
         "/edit-profile": _layout_profile,
+        "/offline": _layout_offline,
     }
 
     # Ordered (most-specific-first) substring checks for parametrized
     # routes — checked before the plain prefix list below.
     SKELETON_LAYOUT_CONTAINS = [
+        ("/create", _layout_form),                     # catches /courses/create, /organisations/:org_id/courses/create, /playlists/create
         ("/invite-members", _layout_form),             # .../organisations/:org_id/invite-members
         ("/manage", _layout_course_builder),           # .../courses/:id/manage
+        ("/build", _layout_course_builder),            # .../playlists/:id/build
         ("/view", _layout_course_reader),               # .../courses/:id/view
-        ("/stats", _layout_course_reader),
-        ("/analytics", _layout_course_reader),
-        ("/settings", _layout_course_reader),
-        ("/courses", _layout_course_library),           # /organisations/:org_id/courses
+        ("/stats", _layout_analytics),
+        ("/analytics", _layout_analytics),
+        ("/settings", _layout_settings),
+        ("/courses/", _layout_course_details),          # Catches /courses/:id and /organisations/:org_id/courses/:id
+        ("/playlists/", _layout_course_details),        # Catches /playlists/:id and /organisations/:org_id/playlists/:id
     ]
 
     SKELETON_LAYOUT_PREFIXES = [
         ("/member/", _layout_profile),
-        ("/courses/", _layout_course_reader),           # bare /courses/:id fallback
         ("/organisations/", _layout_course_library),    # org sub-routes fallback
         ("/accept-invite/", _layout_form),
     ]
@@ -1047,6 +1256,8 @@ async def main(page: ft.Page):
             # ConnectTimeout deep inside its own data-fetching code).
             # Don't let this leave a blank screen — fall back gracefully.
             print(f"load_view: view coroutine raised: {ex!r}")
+            import traceback
+            traceback.print_exc()
             await handle_failure(ex)
             return
 
@@ -1068,45 +1279,87 @@ async def main(page: ft.Page):
         page.update()
 
     # --- 4. ROUTING LOGIC ---
+    route_change_state = {"in_flight": False, "pending_rerun": False}
+
     async def route_change(e):
+        # Re-entrancy guard: on resume-from-background, on_window_event
+        # can call route_change(None) directly at roughly the same moment
+        # Flet's own on_route_change fires for the same resume. Without
+        # this guard, two overlapping runs both push a skeleton and race
+        # to pop/replace page.views — whichever shimmer_task.cancel() loses
+        # the race leaves an orphaned shimmer animating forever over a view
+        # that's already been swapped or cleared by the other run. That's
+        # the "blank screen after a long time away" bug.
+        #
+        # BUG FIX: the original version of this guard just returned
+        # immediately when a run was already in flight — silently
+        # DROPPING the new navigation request rather than queuing it.
+        # That's what caused "I have to tap the button multiple times":
+        # a tap that landed while a previous route_change was still
+        # finishing (e.g. the fallback error view's own render, or the
+        # connectivity probe on a course open) did nothing at all, with
+        # no feedback — the user had no way to know their tap was
+        # ignored, so they just kept tapping until one landed in the gap
+        # between runs. Fixed by remembering that a rerun was requested
+        # and immediately re-running _route_change_inner() (against
+        # whatever page.route is by then) once the in-flight run
+        # finishes, instead of dropping it.
+        if route_change_state["in_flight"]:
+            route_change_state["pending_rerun"] = True
+            return
+
+        route_change_state["in_flight"] = True
         try:
-            await _route_change_inner()
-        except Exception as ex:
-            # Absolute last line of defense: nothing that happens while
-            # building/loading a view should ever be allowed to escape
-            # route_change uncaught — an uncaught exception here crashes
-            # Flet's session bootstrap itself (AttributeError on a None
-            # session), not just this one navigation.
-            print(f"route_change failed: {ex!r}")
-            try:
-                page.views.clear()
-                page.views.append(
-                    ft.View(
-                        route=page.route,
-                        controls=[
-                            ft.Column(
-                                [
-                                    ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ERROR, size=40),
-                                    ft.Text("Something went wrong loading this page.", size=16),
-                                    ft.Text(str(ex), size=12, color=ft.Colors.OUTLINE),
-                                    ft.FilledButton(
-                                        "Go to login",
-                                        on_click=lambda e: page.go("/"),
-                                    ),
+            while True:
+                route_change_state["pending_rerun"] = False
+                try:
+                    await _route_change_inner()
+                except Exception as ex:
+                    # Absolute last line of defense: nothing that happens
+                    # while building/loading a view should ever be allowed
+                    # to escape route_change uncaught — an uncaught
+                    # exception here crashes Flet's session bootstrap
+                    # itself (AttributeError on a None session), not just
+                    # this one navigation.
+                    print(f"route_change failed: {ex!r}")
+                    try:
+                        page.views.clear()
+                        page.views.append(
+                            ft.View(
+                                route=page.route,
+                                controls=[
+                                    ft.Column(
+                                        [
+                                            ft.Icon(ft.Icons.ERROR_OUTLINE, color=ft.Colors.ERROR, size=40),
+                                            ft.Text("Something went wrong loading this page.", size=16),
+                                            ft.Text(str(ex), size=12, color=ft.Colors.OUTLINE),
+                                            ft.FilledButton(
+                                                "Go to login",
+                                                on_click=lambda e: page.go("/"),
+                                            ),
+                                        ],
+                                        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                        alignment=ft.MainAxisAlignment.CENTER,
+                                        spacing=12,
+                                    )
                                 ],
-                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                                alignment=ft.MainAxisAlignment.CENTER,
-                                spacing=12,
+                                padding=20,
                             )
-                        ],
-                        padding=20,
-                    )
-                )
-                page.update()
-            except Exception:
-                # If even the fallback error view fails to render, there's
-                # nothing more we can safely do from here.
-                pass
+                        )
+                        page.update()
+                    except Exception:
+                        # If even the fallback error view fails to render,
+                        # there's nothing more we can safely do from here.
+                        pass
+
+                if not route_change_state["pending_rerun"]:
+                    break
+                # A navigation request came in while we were busy — run
+                # once more against the now-current page.route rather
+                # than the stale one this iteration started with.
+        finally:
+            route_change_state["in_flight"] = False
+            route_change_state["pending_rerun"] = False
 
     async def _route_change_inner():
         # Remember what was on screen before this navigation, so that if
@@ -1148,30 +1401,94 @@ async def main(page: ft.Page):
         def is_public_route(route):
             return route in ["/", "/signup"] or route.startswith("/accept-invite/")
 
-        def show_error_dialog(message: str = "Network error, please try again", title: str = None, icon=None):
+        def is_offline_capable_route(route):
+            # Routes reachable without a network call succeeding, even
+            # though they still need to know "which user" (so NOT lumped
+            # in with is_public_route, which is for pre-login routes).
+            # /offline: the downloaded-courses list, reads only SQLite.
+            # /courses/{id}/learn: gets a second, offline-specific check
+            # below (only skips the auth gate if THIS SPECIFIC course was
+            # actually downloaded) rather than being blanket-exempted here.
+            return route == "/offline"
+
+        async def is_route_for_downloaded_course(route):
+            troute_check = ft.TemplateRoute(route)
+            if troute_check.match("/courses/:course_id/view"):
+                return is_course_downloaded(page, troute_check.course_id)
+            return False
+
+        def show_error_dialog(message: str = "Network error, please try again", title: str = None, icon=None, offer_offline: bool = False):
             """Sleek, non-blocking error notice shown after falling back to
             the previous view. Uses a SnackBar (not a modal AlertDialog) so
             the view underneath stays fully interactable — the user can keep
             tapping around immediately, the notice just floats on top and
-            dismisses itself."""
+            dismisses itself.
+
+            offer_offline=True adds a "Downloaded courses" action to the
+            SnackBar itself. This matters because falling back to a
+            previous view (the fell_back=True path in report_failure)
+            previously had NO offline escape hatch at all — only the
+            fell_back=False path (_error_fallback_view, shown when there's
+            no previous view to restore) had the button. A connectivity
+            failure mid-navigation, with a previous view to fall back to,
+            showed a bare SnackBar and nothing else — which is why the
+            offline button seemed to "not show" even though it existed on
+            the other failure path.
+
+            NOTE on the SnackBar API used here (verified against Flet's
+            current docs, since an earlier version of this guessed wrong
+            and used action_color, which doesn't exist):
+            - `action` accepts either a plain str OR a full SnackBarAction
+              control. We use SnackBarAction here (not the plain string
+              shortcut) specifically because we want custom text_color —
+              the plain-string form has no way to set that; only
+              SnackBarAction exposes text_color/bgcolor directly.
+            - `on_action` lives on SnackBar itself and fires for the
+              plain-string form. Since we're using SnackBarAction, the
+              click handler goes on SnackBarAction.on_click instead —
+              SnackBar.on_action would never fire in that case.
+            - Showing a SnackBar in this Flet version is
+              page.show_dialog(snack), not page.overlay.append(...).
+            - duration must be a Duration (or int of ms is NOT directly
+              accepted per current signature — DurationValue), so we wrap
+              it explicitly rather than passing a bare int.
+            """
+            snack_content_controls = [
+                ft.Icon(icon or ft.Icons.WIFI_OFF, color=ft.Colors.ON_PRIMARY, size=20),
+                ft.Text(message, color=ft.Colors.ON_PRIMARY, expand=True),
+            ]
+
+            if offer_offline and _has_any_downloaded_courses():
+                def go_offline(e):
+                    page.go("/offline")
+
+                snack_content_controls.append(
+                    ft.ElevatedButton(
+                        "View Your Downloads",
+                        icon=ft.Icons.DOWNLOAD_FOR_OFFLINE,
+                        color=ft.Colors.ERROR,
+                        bgcolor=ft.Colors.WHITE,
+                        on_click=go_offline,
+                        style=ft.ButtonStyle(
+                            shape=ft.RoundedRectangleBorder(radius=6),
+                            padding=ft.Padding(12, 6, 12, 6),
+                        )
+                    )
+                )
+
             snack = ft.SnackBar(
                 content=ft.Row(
-                    [
-                        ft.Icon(icon or ft.Icons.WIFI_OFF, color=ft.Colors.ON_PRIMARY, size=20),
-                        ft.Text(message, color=ft.Colors.ON_PRIMARY),
-                    ],
+                    snack_content_controls,
                     spacing=10,
                     tight=True,
                 ),
                 bgcolor=ft.Colors.ERROR,
-                duration=3000,  # ms — auto-dismisses, no action needed from the user
+                duration=ft.Duration(milliseconds=5000 if offer_offline else 3000),
                 behavior=ft.SnackBarBehavior.FLOATING,
                 shape=ft.RoundedRectangleBorder(radius=10),
                 margin=ft.Margin.only(left=20, right=20, bottom=20),
             )
-            page.overlay.append(snack)
-            snack.open = True
-            page.update()
+            page.show_dialog(snack)
 
         # ─────────────────────────────────────────────
         # CENTRALIZED ERROR REPORTING
@@ -1203,7 +1520,11 @@ async def main(page: ft.Page):
             kind = classify_failure(ex, status)
             copy = failure_copy(kind, ex, status)
             if fell_back:
-                show_error_dialog(copy["snack_message"], icon=copy["icon"])
+                show_error_dialog(
+                    copy["snack_message"],
+                    icon=copy["icon"],
+                    offer_offline=(kind == "connectivity"),
+                )
             else:
                 await show_session_expired_dialog(
                     copy["dialog_message"],
@@ -1328,10 +1649,9 @@ async def main(page: ft.Page):
             where we want to inform the user but not force them back to login."""
 
             def close_dialog(e=None):
-                dlg.open = False
-                page.update()
+                page.pop_dialog()
                 if redirect_to_login:
-                    page.go("/")
+                    page.go("/login")
 
             dlg = ft.AlertDialog(
                 modal=True,
@@ -1348,16 +1668,14 @@ async def main(page: ft.Page):
                 ],
                 actions_alignment=ft.MainAxisAlignment.END,
             )
-            page.dialog = dlg
-            dlg.open = True
-            page.update()
+            page.show_dialog(dlg)
 
             # Auto-dismiss/redirect after a few seconds if they don't tap the button
             await asyncio.sleep(auto_redirect_seconds)
             if dlg.open:
                 close_dialog()
 
-        if not is_public_route(page.route):
+        if not is_public_route(page.route) and not is_offline_capable_route(page.route) and not await is_route_for_downloaded_course(page.route):
             # Show the skeleton IMMEDIATELY, before the auth check even
             # starts — otherwise on a slow connection the screen sits
             # blank during get_current_user_request(), and only pushes
@@ -1411,37 +1729,86 @@ async def main(page: ft.Page):
             if status == 200:
                 page.session.store.set("current_user", user_data)
             elif status in (401, 403):
-                # Genuinely expired/invalid token — safe to clear it.
-                shimmer_task.cancel()
-                # Same fix as the "no token" branch above: don't leave
-                # page.views empty before showing the dialog. On a cold
-                # open into a protected route (e.g. reopening the app
-                # after the token expired), page.views was empty before
-                # the skeleton was pushed, so popping it here leaves the
-                # dialog with nothing to render on top of — that's the
-                # white-screen-after-shimmer bug. Always land on a real
-                # login view underneath the dialog.
-                if page.views and page.views[-1] is skel:
-                    page.views.pop()
-                if not page.views:
-                    page.views.append(login_view(page))
-                    page.update()
-                await page.shared_preferences.remove("auth_token")
-                await show_session_expired_dialog(
-                    "Your session has ended. Please log in again to continue."
-                )
-                return
+                # Access token expired/invalid — this is now the EXPECTED
+                # steady state (access tokens are short-lived by design).
+                # Try a silent refresh before treating this as a dead
+                # session. Only fall through to session-expired if the
+                # refresh token is ALSO dead (or absent).
+                refreshed = await try_refresh_token(page)
+
+                if refreshed:
+                    # Retry the current-user check with the new token.
+                    new_token = await page.shared_preferences.get("auth_token")
+                    try:
+                        status, user_data = await get_current_user_request(new_token)
+                    except Exception as ex:
+                        # Network failure on the retry — not a session
+                        # problem, treat like any other failed view load.
+                        shimmer_task.cancel()
+                        page.views.pop()
+                        fell_back = await restore_previous_or_fallback(page.route, ex)
+                        page.update()
+                        await report_failure(fell_back=fell_back, ex=ex)
+                        return
+
+                    if status == 200:
+                        page.session.store.set("current_user", user_data)
+                        # Fall through to the normal view-render path below
+                        # (do NOT return here) — this is now a success case.
+                    else:
+                        # Refreshed token STILL failed the current-user
+                        # check. Shouldn't normally happen right after a
+                        # successful refresh, but fail safe rather than
+                        # loop — treat as a genuine session end.
+                        shimmer_task.cancel()
+                        if page.views and page.views[-1] is skel:
+                            page.views.pop()
+                        if not page.views:
+                            page.views.append(login_view(page))
+                            page.update()
+                        await page.shared_preferences.remove("auth_token")
+                        await page.shared_preferences.remove("refresh_token")
+                        await show_session_expired_dialog(
+                            "Your session has ended. Please log in again to continue."
+                        )
+                        return
+                else:
+                    # Refresh didn't succeed — either there was no refresh
+                    # token to begin with, or trying it failed (dead token,
+                    # or a network hiccup during the refresh call itself).
+                    # Same fix as the "no token" branch above: don't leave
+                    # page.views empty before showing the dialog. On a cold
+                    # open into a protected route (e.g. reopening the app
+                    # after everything expired), page.views was empty
+                    # before the skeleton was pushed, so popping it here
+                    # leaves the dialog with nothing to render on top of —
+                    # that's the white-screen-after-shimmer bug. Always
+                    # land on a real login view underneath the dialog.
+                    shimmer_task.cancel()
+                    if page.views and page.views[-1] is skel:
+                        page.views.pop()
+                    if not page.views:
+                        page.views.append(login_view(page))
+                        page.update()
+                    await page.shared_preferences.remove("auth_token")
+                    await page.shared_preferences.remove("refresh_token")
+                    await show_session_expired_dialog(
+                        "Your session has ended. Please log in again to continue."
+                    )
+                    return
             else:
-                # Some other backend error (500, 503, etc). The token might
-                # still be valid — don't destroy it. Fall back to whatever
-                # was on screen before, rather than a dead-end dialog.
+                # Some other backend response arrived (any non-401/403
+                # status). The token might still be valid — don't destroy
+                # it. Fall back to whatever was on screen before, rather
+                # than a dead-end dialog.
                 #
-                # This is where a 503 lands. It's classified as a SERVER
-                # failure (see classify_failure/report_failure above), not
-                # a network/connectivity one — the request reached the
-                # backend and got a real response, it's just telling us
-                # it's unavailable. That's on the backend/infra, not the
-                # client or the user's connection.
+                # NOTE: 503/504 specifically are now classified as
+                # CONNECTIVITY, not server — see classify_failure's
+                # comment block for why (auth.py's own request functions
+                # use those codes to mean "couldn't reach the server" or
+                # "server is cold-starting", not "server sent a real error
+                # response"). Only genuine other-status responses (500,
+                # 422, etc) land in the SERVER bucket.
                 shimmer_task.cancel()
                 page.views.pop()
                 server_ex = RuntimeError(f"Server error {status}")
@@ -1507,6 +1874,18 @@ async def main(page: ft.Page):
             await load_view_and_report(course_stats_view(page, troute.id), page.route, active_skeleton, active_shimmer_task)
         elif page.route == "/self-study":
             await load_view_and_report(self_study_view(page), page.route, active_skeleton, active_shimmer_task)
+        elif troute.match("/organisations/:org_id/playlists"):
+            from src.create_playlist import create_playlists_view
+            await load_view_and_report(create_playlists_view(page, troute.org_id), page.route, active_skeleton, active_shimmer_task)
+        elif troute.match("/playlists/:id/build"):
+            from src.playlist_builder import playlist_builder_view
+            await load_view_and_report(playlist_builder_view(page, troute.id), page.route, active_skeleton, active_shimmer_task)
+        elif troute.match("/playlists/:id/settings"):
+            from src.playlist_settings import playlist_settings_view
+            await load_view_and_report(playlist_settings_view(page, troute.id), page.route, active_skeleton, active_shimmer_task)
+        elif troute.match("/playlists/:id"):
+            from src.playlist_view import playlist_view
+            await load_view_and_report(playlist_view(page, troute.id), page.route, active_skeleton, active_shimmer_task)
         # --- NEW: Dynamic Organization Courses Route ---
         elif troute.match("/organisations/:org_id/courses"):
             # Extracts the ID from the URL and passes it to the view
@@ -1515,8 +1894,113 @@ async def main(page: ft.Page):
             # Extracts the ID from the URL and passes it to the view
             await load_view_and_report(course_builder_view(page, troute.course_id), page.route, active_skeleton, active_shimmer_task)
         elif troute.match("/courses/:course_id/view"):
-            # Extracts the ID from the URL and passes it to the view
-            await load_view_and_report(course_learner_view(page, troute.course_id), page.route, active_skeleton, active_shimmer_task)
+            # Decide online vs offline engine for this course.
+            #
+            # IMPORTANT: token PRESENCE is not the same as being ONLINE.
+            # A refresh token can sit on disk for weeks — it says nothing
+            # about whether the network is actually reachable right now.
+            # The original version of this check used "no token" as a
+            # stand-in for "offline", which meant: logged in + data
+            # switched off + course downloaded => still routed to the
+            # ONLINE engine (since a token existed), which then failed to
+            # reach the API and showed "loading failed" even though a
+            # perfectly good offline copy was sitting right there.
+            #
+            # Fix: if a token exists, ATTEMPT the online engine first (so
+            # a real session still gets fresh content/progress as before)
+            # but if it fails to load AND the course is downloaded, fall
+            # back to the offline engine directly — rather than reporting
+            # a generic connectivity error with no recovery. If there's no
+            # token at all, go straight to offline (unchanged from before).
+            course_id_param = troute.course_id
+            current_token = await page.shared_preferences.get("auth_token")
+            course_downloaded = is_course_downloaded(page, course_id_param)
+
+            # Semantic back-navigation: the course view's own back arrow
+            # used to hardcode page.go("/courses"), which is a protected
+            # route requiring a token. Opening a downloaded course FROM
+            # /offline (no token, by design) then tapping back sent you
+            # to a route that immediately bounced you to login — you
+            # never actually got "back" anywhere. back_target threads
+            # through where we actually came from (previous_route, the
+            # view that was on screen right before this navigation
+            # started) so the arrow returns you there instead — /offline
+            # if that's where you came from, /courses otherwise. Falls
+            # back to "/courses" if there's no usable previous_route
+            # (e.g. this course was the very first view of the session,
+            # opened via a deep link).
+            valid_back_targets = ("/offline", "/courses", "/dashboard", "/network", "/self-study", "/organisations")
+            if previous_route and (previous_route in valid_back_targets or previous_route.startswith("/playlists/") or previous_route.startswith("/organisations/")):
+                back_target = previous_route
+            else:
+                back_target = "/courses"
+
+            if not current_token and course_downloaded:
+                await load_view_and_report(
+                    offline_course_learner_view(page, course_id_param, back_target=back_target),
+                    page.route, active_skeleton, active_shimmer_task
+                )
+            elif current_token and course_downloaded:
+                # Have a token AND a local copy. Token PRESENCE alone
+                # doesn't mean we're online (it can sit on disk for weeks
+                # regardless of current connectivity), so probe with a
+                # real request rather than trusting the token's existence.
+                #
+                # NOTE: course_learner_view can't be used for this probe —
+                # it fires its data fetch via page.run_task (fire-and-
+                # forget) and returns its ft.View shell immediately
+                # regardless of whether that fetch later succeeds or
+                # fails, so awaiting it never raises and never signals
+                # failure; a connectivity problem would only show up later
+                # as a silent "Failed to load course data" message inside
+                # the view we'd have already committed to. get_current_-
+                # user_request is used instead purely as a connectivity
+                # probe — its actual response isn't used, we already have
+                # a valid current_user from the outer auth gate — because
+                # unlike course_learner_view it genuinely raises/returns a
+                # failure status synchronously, which is what we need to
+                # make this decision correctly.
+                try:
+                    probe_status, _ = await get_current_user_request(current_token)
+                    online_reachable = probe_status == 200
+                except Exception:
+                    online_reachable = False
+
+                if online_reachable:
+                    await load_view_and_report(
+                        course_learner_view(page, course_id_param, back_target=back_target),
+                        page.route, active_skeleton, active_shimmer_task
+                    )
+                else:
+                    # BUG FIX: back_target was computed from previous_route
+                    # BEFORE we knew connectivity had actually failed. If
+                    # the user opened this course from /courses (the normal
+                    # case when online), back_target would be "/courses" —
+                    # but we just proved /courses is unreachable right now
+                    # (that's WHY we're in this else branch). Sending the
+                    # back arrow there guarantees an immediate repeat
+                    # failure: /courses is a protected route requiring a
+                    # network round-trip, which fails again, shows the
+                    # connectivity SnackBar again, and since that SnackBar
+                    # path doesn't reliably restore a working view, the UI
+                    # can end up stuck with no responsive control. Once
+                    # we've fallen back to the offline engine due to a
+                    # failed probe, /offline is the only destination we've
+                    # actually confirmed is reachable — use it regardless
+                    # of where the user technically came from.
+                    await load_view_and_report(
+                        offline_course_learner_view(page, course_id_param, back_target="/offline"),
+                        page.route, active_skeleton, active_shimmer_task
+                    )
+            else:
+                # Have a token, no local copy — nothing to fall back to,
+                # let the normal online path + its own error handling run.
+                await load_view_and_report(
+                    course_learner_view(page, course_id_param, back_target=back_target),
+                    page.route, active_skeleton, active_shimmer_task
+                )
+        elif troute.match("/offline"):
+            await load_view_and_report(offline_courses_view(page), page.route, active_skeleton, active_shimmer_task)
         elif troute.match("/member/:user_id"):
             # Extracts the ID from the URL and passes it to the view
             await load_view_and_report(member_profile_view(page, troute.user_id), page.route, active_skeleton, active_shimmer_task)
@@ -1544,44 +2028,19 @@ async def main(page: ft.Page):
                 course_analytics_view(page, org_id=troute.org_id, course_id=troute.course_id),
                 page.route, active_skeleton, active_shimmer_task,
             )
-        elif page.route.startswith("/courses/"):
-            route_parts = page.route.split("/")
-            # Check if we have at least: / , courses , id
-            if len(route_parts) > 2:
-                course_id = route_parts[2]
+        elif troute.match("/courses/:course_id"):
+            # Compute where the back arrow should return to
+            valid_back_targets = ("/offline", "/courses", "/dashboard", "/network", "/self-study", "/organisations")
+            if previous_route and (previous_route in valid_back_targets or previous_route.startswith("/playlists/") or previous_route.startswith("/organisations/")):
+                back_target = previous_route
+            else:
+                back_target = "/courses"
+                
+            await load_view_and_report(
+                course_details_view(page, troute.course_id, back_target=back_target), page.route,
+                active_skeleton, active_shimmer_task,
+            )
 
-                # Check if the name exists at index 3, else use None
-                course_name = route_parts[3] if len(route_parts) > 3 else None
-
-                # Pass both to your view function
-                await load_view_and_report(
-                    course_details_view(page, course_id, course_name), page.route,
-                    active_skeleton, active_shimmer_task,
-                )
-            elif active_skeleton is not None:
-                # No sub-route matched, but we already pushed a skeleton
-                # during the auth check — don't leave it stuck on screen.
-                #
-                # BUG FIX: this used to only cancel the shimmer *task*,
-                # which stops the pulsing animation but does NOT remove
-                # the now-frozen skeleton *view* from page.views. The user
-                # was left staring at a static, no-longer-animating
-                # skeleton indefinitely — visually indistinguishable from
-                # "stuck on shimmer". Actually pop it and restore/fallback
-                # like any other navigation failure.
-                #
-                # NOTE: this is a routing bug (no branch matched the
-                # route), not a network or server failure — don't run it
-                # through report_failure()'s network/server wording, that
-                # would misinform the user about what actually went wrong.
-                active_shimmer_task.cancel()
-                if page.views and page.views[-1] is active_skeleton:
-                    page.views.pop()
-                fell_back = await restore_previous_or_fallback(
-                    page.route, RuntimeError(f"Unknown route: {page.route}")
-                )
-                if fell_back:
-                    show_error_dialog("That page couldn't be found", icon=ft.Icons.ERROR_OUTLINE)
         elif active_skeleton is not None:
             # Protected route matched none of the branches above — same
             # fix as directly above: actually remove the frozen skeleton,
@@ -1659,12 +2118,28 @@ async def main(page: ft.Page):
                 # persisting issue through the normal route_change path.
                 return
             if status in (401, 403):
-                # Token genuinely expired while backgrounded. Re-run the
-                # full route_change, which will re-detect this same
-                # 401/403, clear the token, and show the session-expired
-                # dialog over a real login view — the exact path that
-                # already works correctly for in-session navigations.
-                await route_change(None)
+                # Access token expired while backgrounded — the expected
+                # steady state. Try a silent refresh first so a routine
+                # resume doesn't interrupt the user with a dialog. Only
+                # fall through to the full route_change (which clears
+                # tokens and shows session-expired) if refresh also fails.
+                refreshed = await try_refresh_token(page)
+                if not refreshed:
+                    await route_change(None)
+                    return
+                # If refreshed succeeded: do nothing further. The app
+                # continues showing whatever screen it already had, now
+                # backed by a valid token — no visible interruption.
+
+            # Opportunistic sync-back: resume-with-a-valid-session is a
+            # reasonable moment to push any progress that was tracked
+            # offline. Best-effort — failures here are silent (the sync
+            # job itself just leaves rows unsynced for next time), so this
+            # never interrupts the resume flow with an error.
+            try:
+                await sync_offline_progress(page)
+            except Exception:
+                pass
         finally:
             resume_check_state["in_flight"] = False
 

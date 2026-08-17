@@ -237,7 +237,7 @@ def Signup_view(page: ft.Page):
             width=300,
             content=ft.Column([
                 ft.Text("We sent a 6-digit code to your email. Enter it below to activate your account.", 
-                        size=13, color=ft.Colors.ON_PRIMARY, text_align=ft.TextAlign.CENTER),
+                        size=13, color=ft.Colors.ON_SURFACE, text_align=ft.TextAlign.CENTER),
                 ft.Container(height=10),
                 ft.Row([otp_input], alignment=ft.MainAxisAlignment.CENTER),
                 ft.Row([otp_error_text], alignment=ft.MainAxisAlignment.CENTER),

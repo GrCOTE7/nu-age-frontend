@@ -11,6 +11,7 @@ from src.components.dashboard_card import get_continue_learning_card
 from src.requests.enrollments import get_enrollments
 from src.utils.db_manager import get_weekly_activity
 from src.requests.chats import get_all_users
+from src.utils.quotes import get_random_quote, get_random_greeting, get_random_tip
 
 # ─────────────────────────────────────────────────────────────────────────────
 # HELPERS
@@ -31,6 +32,10 @@ def _card(content, padding=18) -> ft.Container:
             offset=ft.Offset(0, 3),
         ),
         content=content,
+        opacity=0,
+        offset=ft.Offset(0, 0.2),
+        animate_opacity=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+        animate_offset=ft.Animation(400, ft.AnimationCurve.DECELERATE),
     )
 
 
@@ -395,6 +400,12 @@ def build_onboarding_overlay(page: ft.Page, on_dismiss) -> ft.Container:
 async def dashboard_view(page: ft.Page):
     app_bar = get_bottom_appbar(page)
 
+    content_socket = ft.Container(
+        expand=True,
+        alignment=ft.Alignment.CENTER,
+        content=ft.ProgressRing(color=ft.Colors.PRIMARY, stroke_width=3)
+    )
+
     # ── onboarding overlay (lives inside the View's body via a Stack, so it
     # only covers the main page content — the bottom app bar is a separate
     # Scaffold slot and sits outside this Stack, so it's never covered) ─────
@@ -458,34 +469,86 @@ async def dashboard_view(page: ft.Page):
 
     # ── greeting text (mutated after data loads) ──────────────────────────────
     greeting_name = ft.Text(
-        "Hello, there!",
-        size=21, weight=ft.FontWeight.W_700, color=ft.Colors.SURFACE,
+        "",
+        size=24, weight=ft.FontWeight.W_900, color=ft.Colors.SURFACE,
     )
     greeting_sub = ft.Text(
-        "Welcome back to your dashboard.",
-        size=13, color=ft.Colors.with_opacity(0.85, ft.Colors.SURFACE),
+        get_random_quote(),
+        size=12, color=ft.Colors.with_opacity(0.75, ft.Colors.SURFACE),
+        italic=True,
+        opacity=0,
+        offset=ft.Offset(0, 0.3),
+        animate_opacity=ft.Animation(800, ft.AnimationCurve.EASE_OUT),
+        animate_offset=ft.Animation(800, ft.AnimationCurve.EASE_OUT),
+    )
+    
+    # ── tips text ─────────────────────────────────────────────────────────────
+    tip_container = ft.Container(
+        bgcolor=ft.Colors.with_opacity(0.1, ft.Colors.WHITE),
+        border_radius=ft.BorderRadius.all(12),
+        padding=ft.Padding.symmetric(horizontal=12, vertical=8),
+        opacity=0,
+        animate_opacity=ft.Animation(800, ft.AnimationCurve.EASE_OUT),
+        content=ft.Row(
+            wrap=True,
+            spacing=8,
+            controls=[
+                ft.Text(
+                    f'💡{get_random_tip()}',
+                    size=11, color=ft.Colors.with_opacity(0.9, ft.Colors.SURFACE)
+                )
+            ]
+        )
     )
 
+    # ── stats variables (mutated after data loads) ────────────────────────────
+    stat_enrolled = ft.Text("-", size=20, weight=ft.FontWeight.W_800, color=ft.Colors.SURFACE)
+    stat_finished = ft.Text("-", size=20, weight=ft.FontWeight.W_800, color=ft.Colors.SURFACE)
+    stat_streak = ft.Text("-", size=20, weight=ft.FontWeight.W_800, color=ft.Colors.SURFACE)
+
     # ─────────────────────────────────────────────────────────────────────────
-    # 1. HEADER
+    # 1. HEADER / HERO
     # ─────────────────────────────────────────────────────────────────────────
+    def _stat_col(value_text: ft.Text, label: str):
+        return ft.Column(
+            spacing=2,
+            controls=[
+                value_text,
+                ft.Text(label, size=11, color=ft.Colors.with_opacity(0.85, ft.Colors.SURFACE)),
+            ]
+        )
+
     header = ft.Container(
         gradient=ft.LinearGradient(
             begin=ft.Alignment.TOP_LEFT,
             end=ft.Alignment.BOTTOM_RIGHT,
-            colors=[ft.Colors.PRIMARY, ft.Colors.SECONDARY],
+            colors=[ft.Colors.PRIMARY, "#1a3b5c"], # Using PRIMARY and a deep complementary blue
         ),
-        border_radius=ft.BorderRadius.only(bottom_left=28, bottom_right=28),
-        padding=ft.Padding.only(left=22, right=22, top=14, bottom=22),
-        content=ft.Row(
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+        width=float("inf"),
+        border_radius=16,
+        padding=ft.Padding.all(24),
+        margin=ft.Padding.only(left=20, right=20, top=14, bottom=22),
+        opacity=0,
+        offset=ft.Offset(0, 0.2),
+        animate_opacity=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+        animate_offset=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+        content=ft.Column(
+            spacing=20,
             controls=[
                 ft.Column(
-                    spacing=4,
-                    expand=True,
-                    controls=[greeting_name, greeting_sub],
+                    spacing=6,
+                    controls=[greeting_name, greeting_sub, tip_container],
                 ),
+                ft.Row(
+                    wrap=True,
+                    spacing=16,
+                    run_spacing=16,
+                    controls=[
+                        _stat_col(stat_enrolled, "Active Courses"),
+                        _stat_col(stat_finished, "Finished Courses"),
+                        _stat_col(stat_streak, "Day Streak"),
+                    ]
+                )
             ],
         ),
     )
@@ -526,6 +589,10 @@ async def dashboard_view(page: ft.Page):
 
     quick_actions = ft.Row(
         spacing=12,
+        opacity=0,
+        offset=ft.Offset(0, 0.2),
+        animate_opacity=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+        animate_offset=ft.Animation(400, ft.AnimationCurve.DECELERATE),
         controls=[
             quick_tile(
                 ft.Icons.LIBRARY_BOOKS_ROUNDED,
@@ -757,16 +824,54 @@ async def dashboard_view(page: ft.Page):
     # ─────────────────────────────────────────────────────────────────────────
     # 6. CONTINUE LEARNING
     # ─────────────────────────────────────────────────────────────────────────
-    continue_learning_section = ft.Container(width=float("inf"))   # swapped in after data loads
+    continue_learning_section = ft.Container(
+        width=float("inf"),
+        opacity=0,
+        offset=ft.Offset(0, 0.2),
+        animate_opacity=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+        animate_offset=ft.Animation(400, ft.AnimationCurve.DECELERATE),
+    )   # swapped in after data loads
 
     # ─────────────────────────────────────────────────────────────────────────
     # 8. DATA FETCHER
     # ─────────────────────────────────────────────────────────────────────────
     async def fetch_dashboard_data():
-        # ── user greeting ─────────────────────────────────────────────────────
+        # ── user greeting & stats ─────────────────────────────────────────────
         user_data  = page.session.store.get("current_user") or {}
         first_name = user_data.get("first_name", "there")
-        greeting_name.value = f"Hello, {first_name}!"
+        target_greeting = f"{get_random_greeting()} {first_name}!"
+
+        # Trigger fade animations immediately
+        greeting_sub.opacity = 1
+        greeting_sub.offset = ft.Offset(0, 0)
+        tip_container.opacity = 1
+        page.update()
+
+        # Typing animation
+        async def type_greeting(target_text: str):
+            current_text = ""
+            for char in target_text:
+                current_text += char
+                greeting_name.value = current_text + "|"
+                page.update()
+                await asyncio.sleep(0.04)
+            
+            # Blink the cursor a few times
+            for _ in range(3):
+                greeting_name.value = current_text + " "
+                page.update()
+                await asyncio.sleep(0.4)
+                greeting_name.value = current_text + "|"
+                page.update()
+                await asyncio.sleep(0.4)
+                
+            # Remove cursor
+            greeting_name.value = current_text
+            page.update()
+
+        page.run_task(type_greeting, target_greeting)
+        
+        streak = user_data.get("streak", 0)
 
         token = await page.shared_preferences.get("auth_token")
 
@@ -779,6 +884,43 @@ async def dashboard_view(page: ft.Page):
                 enrolled_list = []
         except (asyncio.TimeoutError, Exception):
             enrolled_list = []
+            
+        active_count = len(enrolled_list)
+        finished_count = sum(1 for c in enrolled_list if c.get("progress", 0.0) >= 100)
+        
+        # ── stat animation ────────────────────────────────────────────────────
+        async def animate_stats(target_act: int, target_fin: int, target_str: int):
+            # Find the max so we know how many steps to take if we want to run together
+            max_val = max(target_act, target_fin, target_str)
+            if max_val == 0:
+                stat_enrolled.value = "0"
+                stat_finished.value = "0"
+                stat_streak.value = "0"
+                page.update()
+                return
+
+            # Animate in ~20 steps or max_val steps, whichever is smaller, over ~600ms
+            steps = min(max_val, 15)
+            delay = 0.3 / steps
+
+            for step in range(1, steps + 1):
+                cur_act = int((target_act / steps) * step)
+                cur_fin = int((target_fin / steps) * step)
+                cur_str = int((target_str / steps) * step)
+                
+                stat_enrolled.value = str(cur_act)
+                stat_finished.value = str(cur_fin)
+                stat_streak.value = str(cur_str)
+                page.update()
+                await asyncio.sleep(delay)
+                
+            # Final snap to exact values
+            stat_enrolled.value = str(target_act)
+            stat_finished.value = str(target_fin)
+            stat_streak.value = str(target_str)
+            page.update()
+
+        page.run_task(animate_stats, active_count, finished_count, streak)
 
         # ── build continue-learning cards ─────────────────────────────────────
         enrolled_cards = []
@@ -821,8 +963,17 @@ async def dashboard_view(page: ft.Page):
                 ],
             )
         else:
-            continue_learning_section.content = _card(
-                ft.Column(
+            continue_learning_section.content = ft.Container(
+                bgcolor=ft.Colors.SURFACE,
+                border_radius=16,
+                border=ft.Border.all(1, ft.Colors.GREY_200),
+                padding=18,
+                shadow=ft.BoxShadow(
+                    blur_radius=8,
+                    color=ft.Colors.with_opacity(0.06, ft.Colors.ON_SURFACE),
+                    offset=ft.Offset(0, 3),
+                ),
+                content=ft.Column(
                     horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                     spacing=8,
                     controls=[
@@ -925,7 +1076,56 @@ async def dashboard_view(page: ft.Page):
                 ],
             )
 
+        content_socket.content = ft.Column(
+            expand=True,
+            spacing=0,
+            controls=[
+                ft.Column(
+                    expand=True,
+                    scroll=ft.ScrollMode.AUTO,
+                    spacing=0,
+                    controls=[
+                        header,
+                        ft.Container(
+                            padding=ft.Padding.symmetric(
+                                horizontal=16, vertical=16
+                            ),
+                            content=ft.Column(
+                                spacing=16,
+                                controls=[
+                                    quick_actions,
+                                    friends_card,
+                                    activity_card,
+                                    continue_learning_section,
+                                    self_study_card,
+                                    ft.Container(height=16),
+                                ],
+                            ),
+                        )
+                    ],
+                ),
+            ],
+        )
         page.update()
+        
+        # Trigger staggered fade-up animations for main dashboard sections
+        sections_to_animate = [
+            header,
+            quick_actions, 
+            friends_card, 
+            activity_card, 
+            continue_learning_section, 
+            self_study_card
+        ]
+        
+        for idx, section in enumerate(sections_to_animate):
+            async def animate_section(s, i):
+                await asyncio.sleep(i * 0.1)
+                s.opacity = 1
+                s.offset = ft.Offset(0, 0)
+                page.update()
+            
+            page.run_task(animate_section, section, idx)
 
     page.run_task(fetch_dashboard_data)
 
@@ -943,45 +1143,7 @@ async def dashboard_view(page: ft.Page):
                 controls=[
                     ft.SafeArea(
                         expand=True,
-                        content=ft.Column(
-                            expand=True,
-                            spacing=0,
-                            controls=[
-                                header,
-                                ft.Column(
-                                    expand=True,
-                                    scroll=ft.ScrollMode.AUTO,
-                                    spacing=0,
-                                    controls=[
-                                        ft.Container(
-                                            padding=ft.Padding.symmetric(
-                                                horizontal=16, vertical=16
-                                            ),
-                                            content=ft.Column(
-                                                spacing=16,
-                                                controls=[
-                                                    # Quick action tiles
-                                                    quick_actions,
-                                                    friends_card,
-
-                                                    #browse activity
-                                                    activity_card,
-                                                    # Continue learning
-                                                    continue_learning_section,
-
-                                                    # Self-study
-                                                    self_study_card,
-
-
-
-                                                    ft.Container(height=16),
-                                                ],
-                                            ),
-                                        )
-                                    ],
-                                ),
-                            ],
-                        ),
+                        content=content_socket,
                     ),
                     # Onboarding sits on top of the page content only —
                     # the bottom app bar is a separate Scaffold slot outside

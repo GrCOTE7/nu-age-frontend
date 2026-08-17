@@ -29,8 +29,8 @@ jobs:
       - name: Setup Java (Required for Android)
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: "zulu"
+          java-version: "17"
 
       # NOTE: We intentionally do NOT install Flutter via subosito/flutter-action here.
       # flet-cli manages/downloads the exact Flutter SDK version its build template
@@ -42,7 +42,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install Build Tools
         run: |

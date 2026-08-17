@@ -77,7 +77,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
         desc        = course.get("description", "No description available.")
         image_url   = course.get("image_url")
         course_id   = course.get("id", "")
-        is_public   = course.get("public",      False)
+        is_public_val = str(course.get("public", "false")).lower()
         is_supervised = course.get("supervised", False)
         students    = course.get("total_students", 0)
 
@@ -89,11 +89,12 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                 content=ft.Text(label, size=10, color=fg, weight=ft.FontWeight.W_600),
             )
 
-        status_badge = pill(
-            "Public" if is_public else "Draft",
-            ft.Colors.GREEN_50 if is_public else ft.Colors.GREY_100,
-            ft.Colors.GREEN_700 if is_public else ft.Colors.GREY_600,
-        )
+        if is_public_val == "true":
+            status_badge = pill("Public", ft.Colors.GREEN_50, ft.Colors.GREEN_700)
+        elif is_public_val == "organisation":
+            status_badge = pill("Organization", ft.Colors.BLUE_50, ft.Colors.BLUE_700)
+        else:
+            status_badge = pill("Draft", ft.Colors.GREY_100, ft.Colors.GREY_600)
         type_badge = pill(
             "Instructor-Led" if is_supervised else "Automated",
             ft.Colors.BLUE_50 if is_supervised else ft.Colors.PURPLE_50,
@@ -295,6 +296,12 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
             border_radius=10,
             visible=not is_freelance,
         )
+        
+        auto_certificate_switch = ft.Switch(
+            label="Issue Certificates Automatically",
+            value=True,
+            active_color=ft.Colors.GREEN_600,
+        )
 
         # ── objectives ────────────────────────────────────────────────────────
         objectives_list  = []
@@ -394,6 +401,12 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                 page.update()
                 return
 
+            if not category_dropdown.value:
+                error_text.value   = "Category is required."
+                error_text.visible = True
+                page.update()
+                return
+
             error_text.visible = False
             submit_btn.disabled = True
             submit_btn.content = ft.Row(
@@ -414,7 +427,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                     "name":           name_input.value.strip(),
                     "category_id":    category_dropdown.value,
                     "description":    desc_input.value or name_input.value,
-                    "public":         False,
+                    "public":         "false",
                     "objectives":     objectives_list,
                     "image_bytes":    logo_b64,
                     "image_filename": selected_logo_name,
@@ -423,6 +436,7 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                     # Freelance: always the current user, ignore/hide the picker.
                     # Org context: whoever the admin picked (or None = unassigned).
                     "teacher_id":     current_user_id if is_freelance else (teacher_dropdown.value or None),
+                    "auto_certificate": auto_certificate_switch.value,
                 }
 
                 new_course = await asyncio.wait_for(
@@ -498,6 +512,9 @@ async def create_courses_view(page: ft.Page, org_id: str = None):
                         _section_label("CLASSIFICATION"),
                         category_dropdown,
                         teacher_dropdown,
+                        
+                        _section_label("SETTINGS"),
+                        auto_certificate_switch,
 
                         # ── Cover image ───────────────────────────────────────
                         _section_label("COVER IMAGE"),

@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime
 import asyncio
+import json
 
 # ==========================================
 # REAL BACKEND IMPORTS
@@ -109,6 +110,7 @@ async def chat_view(page: ft.Page) -> ft.View:
             ],
             actions_alignment=ft.MainAxisAlignment.END
         )
+        page.open(dlg)
         page.overlay.append(dlg)
         dlg.open = True
         page.update()
@@ -1098,6 +1100,10 @@ async def chat_view(page: ft.Page) -> ft.View:
             ws_client_ref[0] = ChatWebSocketClient(token)
             await ws_client_ref[0].connect(handle_incoming_message)
 
+        except Exception as e:
+            print(f"CRITICAL ERROR IN LOAD_ACTIVE_CHAT: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
             chat_load_lock[0] = False
 
